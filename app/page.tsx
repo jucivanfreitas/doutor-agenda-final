@@ -11,7 +11,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid max-w-2xl grid-cols-1 gap-6 sm:grid-cols-3">
+        <div className="max-w-2xl grid-cols-1 gap-6 *:grid sm:grid-cols-3">
           <div className="rounded-2xl border border-sky-100 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <h2 className="mb-2 text-lg font-semibold text-sky-700 dark:text-sky-400">
               📅 Agenda
