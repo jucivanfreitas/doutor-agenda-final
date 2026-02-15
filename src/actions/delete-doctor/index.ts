@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { doctorsTable } from "@/db/schema";
 import { protectedWithClinicActionClient } from "@/lib/next-safe-action";
+import { getActiveClinicId } from "@/services/clinic.service";
 
 export const deleteDoctor = protectedWithClinicActionClient
   .schema(
@@ -15,13 +16,17 @@ export const deleteDoctor = protectedWithClinicActionClient
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
+    const clinicId =
+      ctx.user.clinic?.id ?? (await getActiveClinicId(ctx.user.id));
+    if (!clinicId) throw new Error("Clinic not found");
+
     const doctor = await db.query.doctorsTable.findFirst({
       where: eq(doctorsTable.id, parsedInput.id),
     });
     if (!doctor) {
       throw new Error("Médico não encontrado");
     }
-    if (doctor.clinicId !== ctx.user.clinic.id) {
+    if (doctor.clinicId !== clinicId) {
       throw new Error("Médico não encontrado");
     }
     await db.delete(doctorsTable).where(eq(doctorsTable.id, parsedInput.id));

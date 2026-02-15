@@ -79,6 +79,18 @@ export const auth = betterAuth({
       maxAge: FIVE_MINUTES,
     },
     modelName: "sessionsTable",
+    // Cookie configuration: use lax + secure only in production to work on localhost
+    cookies: {
+      sessionToken: {
+        name: "better-auth.session",
+        options: {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+        },
+      },
+    },
   },
   account: {
     modelName: "accountsTable",

@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { doctorsTable } from "@/db/schema";
 import { protectedWithClinicActionClient } from "@/lib/next-safe-action";
+import { getActiveClinicId } from "@/services/clinic.service";
 
 import { upsertDoctorSchema } from "./schema";
 
@@ -15,6 +16,9 @@ dayjs.extend(utc);
 export const upsertDoctor = protectedWithClinicActionClient
   .schema(upsertDoctorSchema)
   .action(async ({ parsedInput, ctx }) => {
+    const clinicId =
+      ctx.user.clinic?.id ?? (await getActiveClinicId(ctx.user.id));
+    if (!clinicId) throw new Error("Clinic not found");
     const availableFromTime = parsedInput.availableFromTime; // 15:30:00
     const availableToTime = parsedInput.availableToTime; // 16:00:00
 
@@ -34,7 +38,7 @@ export const upsertDoctor = protectedWithClinicActionClient
       .values({
         ...parsedInput,
         id: parsedInput.id,
-        clinicId: ctx.user.clinic.id,
+        clinicId,
         availableFromTime: availableFromTimeUTC.format("HH:mm:ss"),
         availableToTime: availableToTimeUTC.format("HH:mm:ss"),
       })

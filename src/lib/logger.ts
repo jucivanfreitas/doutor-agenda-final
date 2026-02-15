@@ -18,7 +18,7 @@ const levelPriority: Record<LogLevel, number> = {
 function getLogStatus(): "ON" | "OFF" {
   try {
     return (process?.env?.LOG_STATUS === "ON" ? "ON" : "OFF") as "ON" | "OFF";
-  } catch (e) {
+  } catch {
     return "OFF";
   }
 }
@@ -28,7 +28,7 @@ function getLogLevel(): LogLevel {
     const v = (process?.env?.LOG_LEVEL || "").toLowerCase();
     if (v === "debug" || v === "info" || v === "warn" || v === "error")
       return v as LogLevel;
-  } catch (e) {
+  } catch {
     // ignore
   }
   return "info";
@@ -50,17 +50,15 @@ function outputToServer(entry: Record<string, unknown>) {
       process.stdout.write(JSON.stringify(entry) + "\n");
       return;
     }
-  } catch (e) {
+  } catch {
     // fallback to console
   }
   // fallback
-  // eslint-disable-next-line no-console
-  console.log(JSON.stringify(entry));
+  console.info(JSON.stringify(entry));
 }
 
 function outputToClient(entry: Record<string, unknown>) {
   // Use console with structured payload
-  // eslint-disable-next-line no-console
   if (entry.level === "error") console.error(entry);
   else if (entry.level === "warn") console.warn(entry);
   else if (entry.level === "debug") console.debug(entry);
