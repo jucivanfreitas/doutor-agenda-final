@@ -1,6 +1,8 @@
-## Roteiro Aula 01: Setup do Projeto
+- # Pleno PSI (Doutor Agenda — rebranding)
 
-- [x] Inicialização do projeto Next.js
+Plataforma de gestão de clínicas e agendamentos — rebranding para "Pleno PSI".
+
+## Roteiro Aula 01: Setup do Projeto
 - [x] Configuração de ferramentas (ESlint, Prettier, Tailwind)
 - [x] Configuração do Drizzle e banco de dados
 - [x] Configuração do shadcn/ui

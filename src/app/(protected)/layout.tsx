@@ -1,8 +1,12 @@
 export const dynamic = "force-dynamic";
 
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  SidebarProvider,
+  SidebarTrigger,
+  SidebarInset,
+} from "@/components/ui/sidebar";
 
-import { AppSidebar } from "./_components/app-sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import { getSystemSettings } from "@/services/system.service";
 
 export default async function Layout({
@@ -15,10 +19,12 @@ export default async function Layout({
   return (
     <SidebarProvider>
       <AppSidebar settings={settings} />
-      <main className="w-full">
-        <SidebarTrigger />
-        {children}
-      </main>
+      <SidebarInset>
+        <main className="w-full">
+          <SidebarTrigger />
+          {children}
+        </main>
+      </SidebarInset>
     </SidebarProvider>
   );
 }

@@ -161,6 +161,7 @@ Raiz do projeto (visão resumida):
       - tsconfig.json
       - public/
       - src/
+
         - middleware.ts
         - actions/
           - add-appointment/
@@ -185,10 +186,12 @@ Raiz do projeto (visão resumida):
             - index.ts
             - schema.ts
         - app/
+
           - globals.css
           - layout.tsx
           - page.tsx
           - (protected)/
+
             - layout.tsx
             - \_components/
               - app-sidebar.tsx
@@ -218,10 +221,27 @@ Raiz do projeto (visão resumida):
                 - doctor-card.tsx
             - patients/
               - page.tsx
+
+            ***
+
+            - Data: 2026-02-15
+            - Autor: VSCode Agent
+            - Tipo: chore/rebranding
+            - Descrição curta: Centralização de branding e rebranding para "Pleno PSI".
+            - Detalhes: Adicionado módulo `src/lib/branding.ts` para obter branding (nome, logo, cores) a partir de `system_settings`. Criado `public/favicon.svg` e atualizados `package.json` (`name` -> `pleno-psi`) e `README.md` para refletir o novo nome. Essas mudanças são não-intrusivas e preservam o uso do serviço `src/services/system.service.ts` como fonte única de verdade para o nome da aplicação.
+            - Arquivos alterados / adicionados:
+
+              - src/lib/branding.ts (novo)
+              - public/favicon.svg (novo)
+              - package.json (modificado — `name` atualizado para `pleno-psi`)
+              - README.md (modificado — título e descrição atualizados)
+
               - \_components/
+
             - subscription/
               - page.tsx
               - \_components/
+
           - api/
             - auth/
               - [...all]/
@@ -234,6 +254,7 @@ Raiz do projeto (visão resumida):
               - sign-up-form.tsx
           - new-subscription/
             - page.tsx
+
         - components/
           - ui/
             - alert-dialog.tsx
@@ -398,77 +419,124 @@ Raiz do projeto (visão resumida):
 
       - Data: 2026-02-15
       - Autor: VSCode Agent
-      - Tipo: bugfix
-      - Descrição curta: Corrige erro de bundling "Can't resolve 'async_hooks'" separando logger em server/client.
-      - Detalhes: Ao introduzir `AsyncLocalStorage` para contexto de request, o módulo de logger (server) importava `async_hooks`. Como `src/app/error.tsx` é um Client Component que importa `logger`, o bundler tentou resolver `async_hooks` no bundle do navegador e falhou. A solução foi separar o logger em três camadas:
-
-        - `shared.ts`: tipos e interface (sem dependências de Node)
-        - `server.ts`: implementação completa usando `node:async_hooks` e `getRequestContext`
-        - `client.ts`: implementação browser-safe que usa `console` e respeita `LOG_STATUS`/`LOG_LEVEL`
-        - `index.ts`: carrega dinamicamente `server` ou `client` via `require()` baseado em `typeof window` para evitar bundling de código server-only no client bundle.
-
-        Também atualizei `src/lib/request-context.ts` para importar `AsyncLocalStorage` de `node:async_hooks` (servidor) e garanti que nenhum código client importe módulos que dependam de `async_hooks`.
-
-      - Arquivos alterados / adicionados:
-
-        - src/lib/logger/shared.ts (novo)
-        - src/lib/logger/server.ts (novo)
-        - src/lib/logger/client.ts (novo)
-        - src/lib/logger/index.ts (novo)
-        - src/lib/logger/config.ts (modificado)
-        - src/lib/request-context.ts (modificado)
-        - src/app/error.tsx (modificado — continua usando `logger`, agora client-safe)
-        - src/hocs/with-authentication.tsx (modificado — instrumentação/logging)
-        - src/middleware.ts (modificado — correlation id header)
-        - src/lib/action-wrapper.ts (novo / modificado)
-        - src/actions/add-appointment/index.ts (modificado — wrapped with logging)
-        - src/actions/get-available-times/index.ts (modificado — wrapped with logging)
-        - src/app/(protected)/dashboard/page.tsx (modificado — session checks)
-        - docs/AUDIT.md (modificado)
-
-      - Branch/PR: main
-      - Notas de deploy/testes: Com `LOG_STATUS=ON`, iniciar a aplicação e abrir páginas client deve NÃO causar erro de "Can't resolve 'async_hooks'". Testar fluxo de erro (forçar throw em client) para validar que `error.tsx` chama `logger.error` sem bundling issues. Verificar que logs no servidor incluem `correlationId` e que logs no browser aparecem via `console` quando `LOG_STATUS=ON`.
       ````
 
-    ```
+---
 
-    ---
+- Data: 2026-02-15
+- Autor: VSCode Agent
+- Tipo: infra/chore
+- Descrição curta: Tentativa de instalar `shadcn sidebar-08` falhou; componente adicionado manualmente.
+- Detalhes: Executei `npx shadcn@latest add sidebar-08` para aplicar o template oficial. A instalação falhou devido a um conflito de dependências (`react-day-picker@8.10.1` exige `react@^18`, enquanto o projeto usa `react@19.1.0`). Tentei novamente com `--legacy-peer-deps` e também falhou. Para não bloquear a migração, criei manualmente o componente `src/components/app-sidebar.tsx` baseado no padrão `sidebar-08`, e atualizei o layout protegido para usar `SidebarInset` e o novo componente. Mantive autenticação, tipagem e suporte multi-tenant.
+- Arquivos alterados / adicionados:
+  - src/components/app-sidebar.tsx (novo — implementação manual adaptada do padrão `sidebar-08`)
+  - src/app/(protected)/layout.tsx (modificado — usa `AppSidebar` e `SidebarInset`)
+  - docs/AUDIT.md (modificado — esta entrada)
+- Branch/PR: implementacao-de-logs
+- Comandos executados / tentativas:
+  1. `npx shadcn@latest add sidebar-08` — falha (ERESOLVE: react-day-picker peer conflict)
+  2. `npx shadcn@latest add sidebar-08 -- --legacy-peer-deps` — falha
+  3. Criação manual de `src/components/app-sidebar.tsx` e atualização do layout protegido
+- Notas de deploy/testes:
 
-    - Data: 2026-02-15
-    - Autor: VSCode Agent
-    - Tipo: infra
-    - Descrição curta: Implementação inicial de logging enterprise (logger, request context, middleware, action wrapper, error boundary) e instrumentação mínima das actions.
-    - Detalhes técnicos:
-      - Adicionado logger centralizado em `src/lib/logger` que produz logs JSON estruturados com `timestamp`, `level`, `message`, `correlationId`, `userId` e `clinicId`. O logger respeita a variável de ambiente `LOG_STATUS` (logs apenas quando `LOG_STATUS=ON`) e permite nível através de `LOG_LEVEL`.
-      - Implementado `AsyncLocalStorage` em `src/lib/request-context.ts` para armazenar `correlationId`, `userId` e `clinicId` durante a execução de actions instrumentadas.
-      - Middleware (`src/middleware.ts`) foi atualizado para gerar/propagar o header `x-correlation-id` e mantivera a checagem de sessão existente.
-      - Criado `withLogging` em `src/lib/action-wrapper.ts` que envolve handlers de actions, registra início/sucesso/erro e executa a operação dentro do contexto de request (via `runWithRequestContext`).
-      - Instrumentadas ações de exemplo: `src/actions/add-appointment/index.ts` e `src/actions/get-available-times/index.ts` para usar `withLogging` e registrar eventos relevantes.
-      - Atualizado `src/hocs/with-authentication.tsx` para registrar estado da sessão e executar renderização com contexto definido (usa `runWithRequestContext`).
-      - Adicionado `src/app/error.tsx` como Error Boundary global que loga erros via `logger.error`.
+  1. Revisar `src/components/app-sidebar.tsx` e ajustar estilos ou ícones caso necessário.
+  2. Caso prefira usar o instalador `shadcn`, escolha uma estratégia de resolução de dependências (rebaixar `react` para `^18.x` ou atualizar dependências incompatíveis) e reexecutar o comando.
+  3. Testar login, navegação, logout e responsividade localmente.
 
-    - Arquivos alterados / adicionados:
-      - src/lib/logger/types.ts (novo)
-      - src/lib/logger/config.ts (novo)
-      - src/lib/logger/index.ts (novo)
-      - src/lib/request-context.ts (novo)
-      - src/lib/action-wrapper.ts (novo)
-      - src/middleware.ts (modificado)
-      - src/hocs/with-authentication.tsx (modificado)
-      - src/actions/add-appointment/index.ts (modificado)
-      - src/actions/get-available-times/index.ts (modificado)
-      - src/app/error.tsx (novo)
-      - docs/AUDIT.md (modificado)
+     ***
 
-    - Notas de teste:
-      1. Defina `LOG_STATUS=ON` e `LOG_LEVEL=debug` no ambiente local.
-      2. Rode `npm install` (resolvendo previamente conflitos de deps) e `npm run dev`.
-      3. Acesse fluxos que executam as actions instrumentadas (ex.: criar agendamento, verificar horários disponíveis) e verifique a saída JSON no terminal — observe `correlationId` e `userId` presentes.
-      4. Defina `LOG_STATUS` para outro valor que não `ON` e confirme que os logs não são emitidos.
+     - Data: 2026-02-15
+     - Autor: VSCode Agent
+     - Tipo: refactor
+     - Descrição curta: Migrado Sidebar custom para padrão `shadcn` `sidebar-08`.
+     - Detalhes: Substituído componente de Sidebar por implementação baseada no padrão `sidebar-08` (shadcn). O novo `AppSidebar` consome `system_settings` para branding dinâmico, utiliza a sessão real (`authClient.useSession()`) para exibir dados do usuário e mantém suporte multi-tenant exibindo o nome da clínica ativa. A implementação preserva autenticação e tipagem (sem `any`). O layout protegido foi atualizado para usar `SidebarProvider` e `SidebarInset` conforme o padrão.
+     - Arquivos alterados / adicionados:
+       - src/components/app-sidebar.tsx (novo — componente shadcn adaptado)
+       - src/app/(protected)/layout.tsx (modificado — importa e usa `AppSidebar` e `SidebarInset`)
+       - src/app/(protected)/\_components/app-sidebar.tsx (mantido para compatibilidade, não utilizado)
+     - Branch/PR: migration/pleno-psi (ou feature/sidebar-shadcn)
+     - Notas de deploy/testes:
 
-    ---
+       1. Iniciar a aplicação em modo dev: `npm run dev`.
+       2. Fazer login com usuário válido; confirmar que o Sidebar renderiza o `appName` do DB e o nome da clínica ativa.
+       3. Navegar por `Dashboard`, `Pacientes`, `Médicos`, `Agendamentos`, `Assinatura` e verificar seleção ativa de rota.
+       4. Testar logout via menu do rodapé.
+       5. Verificar responsividade e comportamento mobile (abrir/fechar sidebar).
 
-    Observações:
-    - Evitei uso de `any` e `as any` em novos arquivos — tipos explícitos foram adicionados para handlers instrumentados.
-    - O escopo implementado foca numa instrumentação mínima e segura. Para cobertura completa, recomenda-se (próximo passo) aplicar `withLogging` a todas actions em `src/actions/` e instrumentar pontos adicionais (auth, stripe webhooks) conforme descrito em `ENTERPRISE_LOGGING_SETUP.md`.
-    ```
+     - Tipo: bugfix
+     - Descrição curta: Corrige erro de bundling "Can't resolve 'async_hooks'" separando logger em server/client.
+     - Detalhes: Ao introduzir `AsyncLocalStorage` para contexto de request, o módulo de logger (server) importava `async_hooks`. Como `src/app/error.tsx` é um Client Component que importa `logger`, o bundler tentou resolver `async_hooks` no bundle do navegador e falhou. A solução foi separar o logger em três camadas:
+
+       - `shared.ts`: tipos e interface (sem dependências de Node)
+       - `server.ts`: implementação completa usando `node:async_hooks` e `getRequestContext`
+       - `client.ts`: implementação browser-safe que usa `console` e respeita `LOG_STATUS`/`LOG_LEVEL`
+       - `index.ts`: carrega dinamicamente `server` ou `client` via `require()` baseado em `typeof window` para evitar bundling de código server-only no client bundle.
+
+       Também atualizei `src/lib/request-context.ts` para importar `AsyncLocalStorage` de `node:async_hooks` (servidor) e garanti que nenhum código client importe módulos que dependam de `async_hooks`.
+
+     - Arquivos alterados / adicionados:
+
+       - src/lib/logger/shared.ts (novo)
+       - src/lib/logger/server.ts (novo)
+       - src/lib/logger/client.ts (novo)
+       - src/lib/logger/index.ts (novo)
+       - src/lib/logger/config.ts (modificado)
+       - src/lib/request-context.ts (modificado)
+       - src/app/error.tsx (modificado — continua usando `logger`, agora client-safe)
+       - src/hocs/with-authentication.tsx (modificado — instrumentação/logging)
+       - src/middleware.ts (modificado — correlation id header)
+       - src/lib/action-wrapper.ts (novo / modificado)
+       - src/actions/add-appointment/index.ts (modificado — wrapped with logging)
+       - src/actions/get-available-times/index.ts (modificado — wrapped with logging)
+       - src/app/(protected)/dashboard/page.tsx (modificado — session checks)
+       - docs/AUDIT.md (modificado)
+
+     - Branch/PR: main
+     - Notas de deploy/testes: Com `LOG_STATUS=ON`, iniciar a aplicação e abrir páginas client deve NÃO causar erro de "Can't resolve 'async_hooks'". Testar fluxo de erro (forçar throw em client) para validar que `error.tsx` chama `logger.error` sem bundling issues. Verificar que logs no servidor incluem `correlationId` e que logs no browser aparecem via `console` quando `LOG_STATUS=ON`.
+
+     ```
+
+     ```
+
+  ```
+
+  ---
+
+  - Data: 2026-02-15
+  - Autor: VSCode Agent
+  - Tipo: infra
+  - Descrição curta: Implementação inicial de logging enterprise (logger, request context, middleware, action wrapper, error boundary) e instrumentação mínima das actions.
+  - Detalhes técnicos:
+    - Adicionado logger centralizado em `src/lib/logger` que produz logs JSON estruturados com `timestamp`, `level`, `message`, `correlationId`, `userId` e `clinicId`. O logger respeita a variável de ambiente `LOG_STATUS` (logs apenas quando `LOG_STATUS=ON`) e permite nível através de `LOG_LEVEL`.
+    - Implementado `AsyncLocalStorage` em `src/lib/request-context.ts` para armazenar `correlationId`, `userId` e `clinicId` durante a execução de actions instrumentadas.
+    - Middleware (`src/middleware.ts`) foi atualizado para gerar/propagar o header `x-correlation-id` e mantivera a checagem de sessão existente.
+    - Criado `withLogging` em `src/lib/action-wrapper.ts` que envolve handlers de actions, registra início/sucesso/erro e executa a operação dentro do contexto de request (via `runWithRequestContext`).
+    - Instrumentadas ações de exemplo: `src/actions/add-appointment/index.ts` e `src/actions/get-available-times/index.ts` para usar `withLogging` e registrar eventos relevantes.
+    - Atualizado `src/hocs/with-authentication.tsx` para registrar estado da sessão e executar renderização com contexto definido (usa `runWithRequestContext`).
+    - Adicionado `src/app/error.tsx` como Error Boundary global que loga erros via `logger.error`.
+
+  - Arquivos alterados / adicionados:
+    - src/lib/logger/types.ts (novo)
+    - src/lib/logger/config.ts (novo)
+    - src/lib/logger/index.ts (novo)
+    - src/lib/request-context.ts (novo)
+    - src/lib/action-wrapper.ts (novo)
+    - src/middleware.ts (modificado)
+    - src/hocs/with-authentication.tsx (modificado)
+    - src/actions/add-appointment/index.ts (modificado)
+    - src/actions/get-available-times/index.ts (modificado)
+    - src/app/error.tsx (novo)
+    - docs/AUDIT.md (modificado)
+
+  - Notas de teste:
+    1. Defina `LOG_STATUS=ON` e `LOG_LEVEL=debug` no ambiente local.
+    2. Rode `npm install` (resolvendo previamente conflitos de deps) e `npm run dev`.
+    3. Acesse fluxos que executam as actions instrumentadas (ex.: criar agendamento, verificar horários disponíveis) e verifique a saída JSON no terminal — observe `correlationId` e `userId` presentes.
+    4. Defina `LOG_STATUS` para outro valor que não `ON` e confirme que os logs não são emitidos.
+
+  ---
+
+  Observações:
+  - Evitei uso de `any` e `as any` em novos arquivos — tipos explícitos foram adicionados para handlers instrumentados.
+  - O escopo implementado foca numa instrumentação mínima e segura. Para cobertura completa, recomenda-se (próximo passo) aplicar `withLogging` a todas actions em `src/actions/` e instrumentar pontos adicionais (auth, stripe webhooks) conforme descrito em `ENTERPRISE_LOGGING_SETUP.md`.
+  ```

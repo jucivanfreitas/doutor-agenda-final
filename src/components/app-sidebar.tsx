@@ -1,5 +1,8 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   CalendarDays,
   Gem,
@@ -8,9 +11,6 @@ import {
   Stethoscope,
   UsersRound,
 } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -33,53 +33,40 @@ import {
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 
-const items = [
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Agendamentos",
-    url: "/appointments",
-    icon: CalendarDays,
-  },
-  {
-    title: "Médicos",
-    url: "/doctors",
-    icon: Stethoscope,
-  },
-  {
-    title: "Pacientes",
-    url: "/patients",
-    icon: UsersRound,
-  },
-];
-
 type SystemSettings = Awaited<
   ReturnType<typeof import("@/services/system.service").getSystemSettings>
 >;
 
+const navMain = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Pacientes", url: "/patients", icon: UsersRound },
+  { title: "Médicos", url: "/doctors", icon: Stethoscope },
+  { title: "Agendamentos", url: "/appointments", icon: CalendarDays },
+];
+
+const navSecondary = [
+  { title: "Assinatura", url: "/subscription", icon: Gem },
+  // manter espaço para Suporte / Configurações se necessário
+];
+
 export function AppSidebar({ settings }: { settings?: SystemSettings | null }) {
   const router = useRouter();
-  const session = authClient.useSession();
   const pathname = usePathname();
+  const session = authClient.useSession();
 
   const handleSignOut = async () => {
     await authClient.signOut({
       fetchOptions: {
-        onSuccess: () => {
-          router.push("/authentication");
-        },
+        onSuccess: () => router.push("/authentication"),
       },
     });
   };
-  const appName = settings?.appName ?? "Pleno Psi";
+
+  const appName = settings?.appName ?? "Pleno PSI";
   const logoUrl = settings?.logoUrl ?? "/logo.svg";
 
   return (
     <Sidebar className="bg-background border-r">
-      {/* HEADER */}
       <SidebarHeader className="border-b px-5 py-6">
         <div className="flex items-center gap-3">
           <Image
@@ -90,15 +77,18 @@ export function AppSidebar({ settings }: { settings?: SystemSettings | null }) {
             className="shrink-0 object-contain"
             priority
           />
-          <span className="text-xl font-semibold tracking-tight">
-            {appName}
-          </span>
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold tracking-tight">
+              {appName}
+            </span>
+            <span className="text-muted-foreground text-xs">
+              {session.data?.user?.clinic?.name ?? "Sem clínica"}
+            </span>
+          </div>
         </div>
       </SidebarHeader>
 
-      {/* CONTENT */}
       <SidebarContent className="px-3 py-6">
-        {/* MENU PRINCIPAL */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-foreground/80 px-3 pb-3 text-[11px] font-semibold tracking-[0.14em] uppercase">
             Menu Principal
@@ -106,7 +96,7 @@ export function AppSidebar({ settings }: { settings?: SystemSettings | null }) {
 
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              {items.map((item) => (
+              {navMain.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
@@ -127,7 +117,6 @@ export function AppSidebar({ settings }: { settings?: SystemSettings | null }) {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* OUTROS */}
         <SidebarGroup className="mt-8">
           <SidebarGroupLabel className="text-foreground/80 px-3 pb-3 text-[11px] font-semibold tracking-[0.14em] uppercase">
             Outros
@@ -135,27 +124,28 @@ export function AppSidebar({ settings }: { settings?: SystemSettings | null }) {
 
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === "/subscription"}
-                  className="group hover:bg-muted flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all"
-                >
-                  <Link
-                    href="/subscription"
-                    className="flex w-full items-center gap-3"
+              {navSecondary.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.url}
+                    className="group hover:bg-muted flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all"
                   >
-                    <Gem className="text-muted-foreground group-hover:text-foreground h-4 w-4 transition-colors" />
-                    <span className="font-medium">Assinatura</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                    <Link
+                      href={item.url}
+                      className="flex w-full items-center gap-3"
+                    >
+                      <item.icon className="text-muted-foreground group-hover:text-foreground h-4 w-4 transition-colors" />
+                      <span className="font-medium">{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      {/* FOOTER */}
       <SidebarFooter className="border-t px-4 py-5">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -176,7 +166,7 @@ export function AppSidebar({ settings }: { settings?: SystemSettings | null }) {
                       {session.data?.user?.clinic?.name}
                     </span>
                     <span className="text-muted-foreground max-w-[150px] truncate text-xs">
-                      {session.data?.user.email}
+                      {session.data?.user?.email}
                     </span>
                   </div>
                 </SidebarMenuButton>
@@ -198,3 +188,5 @@ export function AppSidebar({ settings }: { settings?: SystemSettings | null }) {
     </Sidebar>
   );
 }
+
+export default AppSidebar;
