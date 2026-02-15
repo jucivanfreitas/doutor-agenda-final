@@ -41,6 +41,26 @@
       2. Inserir linha seed em `system_settings` com `app_name = "Pleno PSI"`.
       3. Iniciar a aplicação e verificar que a metadata do site é `Pleno PSI`.
 
+    ---
+
+    - Data: 2026-02-15
+    - Autor: VSCode Agent
+    - Tipo: infra/migration
+    - Descrição curta: Migration para `system_settings` criada e seed aplicada.
+    - Detalhes: Adicionada migration SQL em `drizzle/20260215_create_system_settings.sql` que cria a tabela `system_settings` e insere o registro inicial (`id='system', app_name='Pleno PSI'`).
+    - Arquivos alterados / adicionados:
+      - drizzle/20260215_create_system_settings.sql (novo)
+      - src/db/schema.ts (modificado — adicionada definição `system_settings`)
+      - src/services/system.service.ts (novo)
+      - src/app/layout.tsx (modificado)
+      - src/lib/logger.ts (modificado)
+    - Branch/PR: migration/pleno-psi
+    - Notas de deploy/testes:
+      1. Aplicar migration pelo fluxo do projeto (drizzle). Exemplo:
+         `npx drizzle-kit migrate` (ver `drizzle.config.ts` e adaptações do projeto).
+      2. Confirmar que `SELECT * FROM system_settings;` retorna o registro `system`.
+      3. Iniciar a aplicação e verificar a metadata da aplicação exibindo `Pleno PSI`.
+
     - Autor: VSCode Agent
     - Tipo: bugfix
     - Descrição curta: Corrige fluxo de atualização de plano via webhook Stripe.
