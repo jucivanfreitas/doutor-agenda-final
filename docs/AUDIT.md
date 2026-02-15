@@ -362,8 +362,33 @@ Raiz do projeto (visão resumida):
 
       - Você pode adicionar essa pasta ao `PATH` do Windows para chamar `stripe` de qualquer terminal.
       - O login é necessário para que eventos de checkout / webhooks e testes de fluxo de compra funcionem corretamente em ambiente local.
+      ````
 
-      ## Template para registrar atualizações (Audit log)
+    ```
+
+    ---
+
+    - Data: 2026-02-15
+    - Autor: VSCode Agent
+    - Tipo: infra/maintenance
+    - Descrição curta: Aplicadas migrations multi-tenant, gerados tipos Drizzle e corrigidos erros TypeScript.
+    - Detalhes: Foram adicionadas as migrations `drizzle/20260215_create_clinics.sql` e `drizzle/20260215_create_users_to_clinics.sql` e aplicadas ao banco com `npx drizzle-kit migrate`. Em seguida foi executada a geração de tipos (`npx drizzle-kit generate`) e a checagem TypeScript (`npx tsc --noEmit`). Vários erros de tipagem encontrados após a geração foram corrigidos para restaurar a integridade do projeto (callbacks tipadas, acesso seguro a campos do objeto `Invoice` do Stripe, await em `headers()` e ajuste no wrapper de logging). O código agora passa na checagem TypeScript local.
+    - Arquivos alterados / adicionados:
+      - drizzle/20260215_create_clinics.sql (novo)
+      - drizzle/20260215_create_users_to_clinics.sql (novo)
+      - src/actions/add-appointment/index.ts (modificado — tipagens e registro de action)
+      - src/actions/get-available-times/index.ts (modificado — tipagens e registro de action)
+      - src/app/(protected)/appointments/_components/add-appointment-form.tsx (modificado — tipagens em map)
+      - src/app/api/stripe/webhook/route.ts (modificado — acesso seguro a `invoice.subscription`, normalização de `stripeSubscriptionId`)
+      - src/lib/action-wrapper.ts (modificado — await `headers()` e wrapper compatível)
+      - docs/AUDIT.md (modificado — esta entrada)
+    - Branch/PR: migration/multi-tenant-phase1 and migration/pleno-psi (work in local branches)
+    - Notas de deploy/testes:
+      1. Aplicar migrations com `npx drizzle-kit migrate`.
+      2. Gerar tipos com `npx drizzle-kit generate` caso o schema mude.
+      3. Executar `npx tsc --noEmit` para validar tipagem.
+      4. Testar fluxo de login, criação de agendamento e webhooks Stripe em ambiente local.
+
 
       Use o bloco abaixo para registrar mudanças de código, decisões importantes e informações relevantes para auditoria.
 
@@ -436,7 +461,7 @@ Raiz do projeto (visão resumida):
 
       - Data: 2026-02-15
       - Autor: VSCode Agent
-      ````
+    ```
 
 ---
 
