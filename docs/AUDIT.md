@@ -105,6 +105,23 @@
         4. Conferir logs: `subscription.success: page requested`, `subscription.success: plan check` e `stripe.webhook.db.update` com `userId`/`result`.
         5. Verificar que, após o webhook atualizar o DB, a página redireciona para `/dashboard`.
 
+---
+
+- Data: 2026-02-15
+- Autor: VSCode Agent
+- Tipo: feature
+- Descrição curta: Criação da base estrutural multi-tenant (clinics e users_to_clinics).
+- Detalhes: Adicionadas migrations para as tabelas `clinics` e `users_to_clinics`. Essas tabelas formam a base da arquitetura multi-tenant; a associação entre usuários e clínicas foi criada como `users_to_clinics` para manter consistência com `src/db/schema.ts`. As referências `clinic_id` nas tabelas existentes permanecem inalteradas e serão tratadas na Fase 2.
+- Arquivos alterados / adicionados:
+  - drizzle/20260215_create_clinics.sql (novo)
+  - drizzle/20260215_create_users_to_clinics.sql (novo)
+  - src/db/schema.ts (já contém definições compatíveis com as novas migrations)
+- Branch/PR: migration/multi-tenant-phase1
+- Notas de deploy/testes:
+  1. Aplicar migrations com `npx drizzle-kit migrate`.
+  2. Confirmar que `SELECT * FROM clinics;` e `SELECT * FROM users_to_clinics;` retornam resultados (ou vazios) sem erro.
+  3. Iniciar a aplicação (`npm run dev`) e validar que não há regressões aparentes.
+
 ## O que é a aplicação
 
 Pleno Psi é uma aplicação web para gerenciamento de clínicas, médicos, pacientes e agendamentos. Fornece painel administrativo, CRUD para médicos e pacientes, agendamento de consultas com verificação de horários disponíveis e integração com Stripe para funcionalidades de compra/subscrição.
