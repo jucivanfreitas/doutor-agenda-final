@@ -23,6 +23,24 @@
       4. Conferir logs: `stripe.webhook.received`, `stripe.webhook.updated-user`, `subscription.success: page requested`.
       5. Verificar redirecionamento automático para `/dashboard` após webhook atualizar o DB.
 
+    ---
+
+    - Data: 2026-02-15
+    - Autor: VSCode Agent
+    - Tipo: feature
+    - Descrição curta: Adicionado `system_settings` e suporte a metadata-driven app name (Pleno PSI).
+    - Detalhes: Criada tabela `system_settings` e serviço `src/services/system.service.ts` para obter nome da aplicação. Atualizada `src/app/layout.tsx` para usar `generateMetadata()` buscando o nome do banco. Prefixo do logger atualizado para `[PLENO-PSI]`.
+    - Arquivos alterados / adicionados:
+      - src/db/schema.ts (adicionado `system_settings`)
+      - src/services/system.service.ts (novo)
+      - src/app/layout.tsx (modificado — usa `generateMetadata`)
+      - src/lib/logger.ts (modificado — prefixo `[PLENO-PSI]`)
+    - Branch/PR: migration/pleno-psi
+    - Notas de deploy/testes:
+      1. Criar migration correspondente (drizzle) e aplicá-la no banco de dados.
+      2. Inserir linha seed em `system_settings` com `app_name = "Pleno PSI"`.
+      3. Iniciar a aplicação e verificar que a metadata do site é `Pleno PSI`.
+
     - Autor: VSCode Agent
     - Tipo: bugfix
     - Descrição curta: Corrige fluxo de atualização de plano via webhook Stripe.

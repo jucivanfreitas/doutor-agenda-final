@@ -76,6 +76,15 @@ export const clinicsTable = pgTable("clinics", {
     .$onUpdate(() => new Date()),
 });
 
+export const systemSettingsTable = pgTable("system_settings", {
+  id: text("id").primaryKey(),
+  appName: text("app_name").notNull(),
+  logoUrl: text("logo_url"),
+  primaryColor: text("primary_color"),
+  supportEmail: text("support_email"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const usersToClinicsTable = pgTable("users_to_clinics", {
   userId: text("user_id")
     .notNull()

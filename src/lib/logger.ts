@@ -71,10 +71,11 @@ function makeLoggerMethod(level: LogLevel) {
   return (message: string, ctx?: LogContext | Error | null) => {
     if (!shouldLog(level)) return;
     const isServer = typeof window === "undefined";
+    const prefix = "[PLENO-PSI] ";
     const base = {
       timestamp: new Date().toISOString(),
       level,
-      message,
+      message: `${prefix}${message}`,
     } as Record<string, unknown>;
     if (ctx instanceof Error) {
       base.meta = { name: ctx.name, message: ctx.message };
