@@ -7,16 +7,10 @@ import { appointmentsTable, doctorsTable, patientsTable } from "@/db/schema";
 interface Params {
   from: string;
   to: string;
-  session: {
-    user: {
-      clinic: {
-        id: string;
-      };
-    };
-  };
+  clinicId: string;
 }
 
-export const getDashboard = async ({ from, to, session }: Params) => {
+export const getDashboard = async ({ from, to, clinicId }: Params) => {
   const chartStartDate = dayjs().subtract(10, "days").startOf("day").toDate();
   const chartEndDate = dayjs().add(10, "days").endOf("day").toDate();
   const [
@@ -36,7 +30,7 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       .from(appointmentsTable)
       .where(
         and(
-          eq(appointmentsTable.clinicId, session.user.clinic.id),
+          eq(appointmentsTable.clinicId, clinicId),
           gte(appointmentsTable.date, new Date(from)),
           lte(appointmentsTable.date, new Date(to)),
         ),
@@ -48,7 +42,7 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       .from(appointmentsTable)
       .where(
         and(
-          eq(appointmentsTable.clinicId, session.user.clinic.id),
+          eq(appointmentsTable.clinicId, clinicId),
           gte(appointmentsTable.date, new Date(from)),
           lte(appointmentsTable.date, new Date(to)),
         ),
@@ -58,13 +52,13 @@ export const getDashboard = async ({ from, to, session }: Params) => {
         total: count(),
       })
       .from(patientsTable)
-      .where(eq(patientsTable.clinicId, session.user.clinic.id)),
+      .where(eq(patientsTable.clinicId, clinicId)),
     db
       .select({
         total: count(),
       })
       .from(doctorsTable)
-      .where(eq(doctorsTable.clinicId, session.user.clinic.id)),
+      .where(eq(doctorsTable.clinicId, clinicId)),
     db
       .select({
         id: doctorsTable.id,
@@ -82,7 +76,7 @@ export const getDashboard = async ({ from, to, session }: Params) => {
           lte(appointmentsTable.date, new Date(to)),
         ),
       )
-      .where(eq(doctorsTable.clinicId, session.user.clinic.id))
+      .where(eq(doctorsTable.clinicId, clinicId))
       .groupBy(doctorsTable.id)
       .orderBy(desc(count(appointmentsTable.id)))
       .limit(10),
@@ -95,7 +89,7 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       .innerJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
       .where(
         and(
-          eq(appointmentsTable.clinicId, session.user.clinic.id),
+          eq(appointmentsTable.clinicId, clinicId),
           gte(appointmentsTable.date, new Date(from)),
           lte(appointmentsTable.date, new Date(to)),
         ),
@@ -104,7 +98,7 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       .orderBy(desc(count(appointmentsTable.id))),
     db.query.appointmentsTable.findMany({
       where: and(
-        eq(appointmentsTable.clinicId, session.user.clinic.id),
+        eq(appointmentsTable.clinicId, clinicId),
         gte(appointmentsTable.date, new Date()),
         lte(appointmentsTable.date, new Date()),
       ),
@@ -125,7 +119,7 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       .from(appointmentsTable)
       .where(
         and(
-          eq(appointmentsTable.clinicId, session.user.clinic.id),
+          eq(appointmentsTable.clinicId, clinicId),
           gte(appointmentsTable.date, chartStartDate),
           lte(appointmentsTable.date, chartEndDate),
         ),

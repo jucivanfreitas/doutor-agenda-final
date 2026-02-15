@@ -62,13 +62,7 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
   } = await getDashboard({
     from,
     to,
-    session: {
-      user: {
-        clinic: {
-          id: session!.user.clinic!.id,
-        },
-      },
-    },
+    clinicId: session!.user.clinic!.id,
   });
 
   return (
