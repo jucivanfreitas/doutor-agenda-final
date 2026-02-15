@@ -91,6 +91,10 @@ export const POST = async (request: Request) => {
       }
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
+        // `Invoice` typing may not expose `subscription` in all Stripe versions —
+        // read via a safe field access from the raw object
+        const invoiceAny = invoice as unknown as Record<string, unknown>;
+        const subscriptionField = invoiceAny["subscription"]; // unknown
         logger.info("stripe.event", {
           module: "stripe.webhook",
           metadata: {
@@ -98,29 +102,37 @@ export const POST = async (request: Request) => {
             invoiceId: invoice.id ?? null,
             customer: invoice.customer ?? null,
             metadata: invoice.metadata ?? null,
-            subscription: invoice.subscription ?? null,
+            subscription: subscriptionField ?? null,
           },
         });
         let userId: string | undefined = undefined;
         // Try invoice metadata first
-        if (invoice.metadata && (invoice.metadata as any).userId) {
-          userId = (invoice.metadata as any).userId as string;
+        if (
+          invoice.metadata &&
+          (invoice.metadata as Record<string, unknown>)["userId"]
+        ) {
+          userId = (invoice.metadata as Record<string, unknown>)[
+            "userId"
+          ] as string;
         }
         // If subscription id present, fetch subscription metadata
-        if (!userId && invoice.subscription) {
+        if (!userId && subscriptionField) {
           try {
             const subscriptionId =
-              typeof invoice.subscription === "string"
-                ? invoice.subscription
-                : invoice.subscription.id;
-            const subscription =
-              await stripe.subscriptions.retrieve(subscriptionId);
+              typeof subscriptionField === "string"
+                ? subscriptionField
+                : (subscriptionField as Record<string, unknown>)?.["id"];
+            const subscription = await stripe.subscriptions.retrieve(
+              subscriptionId as string,
+            );
             if (
               subscription &&
               subscription.metadata &&
               (subscription.metadata as any).userId
             ) {
-              userId = (subscription.metadata as any).userId as string;
+              userId = (subscription.metadata as Record<string, unknown>)[
+                "userId"
+              ] as string;
             }
           } catch (e) {
             logger.warn("stripe.webhook: failed to retrieve subscription", {
@@ -143,11 +155,21 @@ export const POST = async (request: Request) => {
         const result = await db
           .update(usersTable)
           .set({
-            stripeSubscriptionId: invoice.subscription
-              ? typeof invoice.subscription === "string"
-                ? invoice.subscription
-                : invoice.subscription.id
-              : null,
+            // normalize subscription id to string|null in a type-safe way
+            stripeSubscriptionId: (() => {
+              if (!subscriptionField) return null;
+              if (typeof subscriptionField === "string")
+                return subscriptionField;
+              if (
+                typeof subscriptionField === "object" &&
+                subscriptionField !== null &&
+                "id" in subscriptionField
+              ) {
+                const id = (subscriptionField as Record<string, unknown>)["id"];
+                return typeof id === "string" ? id : null;
+              }
+              return null;
+            })(),
             stripeCustomerId: customer ?? null,
             plan: "PRO",
           })

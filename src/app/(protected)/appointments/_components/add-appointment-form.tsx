@@ -315,15 +315,22 @@ const AddAppointmentForm = ({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {availableTimes?.data?.map((time) => (
-                      <SelectItem
-                        key={time.value}
-                        value={time.value}
-                        disabled={!time.available}
-                      >
-                        {time.label} {!time.available && "(Indisponível)"}
-                      </SelectItem>
-                    ))}
+                    {(() => {
+                      const times = availableTimes?.data as
+                        | { value: string; available: boolean; label: string }[]
+                        | undefined;
+                      return (
+                        times?.map((time) => (
+                          <SelectItem
+                            key={time.value}
+                            value={time.value}
+                            disabled={!time.available}
+                          >
+                            {time.label} {!time.available && "(Indisponível)"}
+                          </SelectItem>
+                        )) ?? null
+                      );
+                    })()}
                   </SelectContent>
                 </Select>
                 <FormMessage />

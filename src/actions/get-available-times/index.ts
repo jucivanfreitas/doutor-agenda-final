@@ -59,7 +59,7 @@ const handler = async ({ parsedInput }: GetAvailableTimesArgs) => {
     .set("minute", Number(doctor.availableToTime.split(":")[1]))
     .set("second", 0)
     .local();
-  const doctorTimeSlots = timeSlots.filter((time) => {
+  const doctorTimeSlots = timeSlots.filter((time: string) => {
     const date = dayjs()
       .utc()
       .set("hour", Number(time.split(":")[0]))
@@ -80,8 +80,6 @@ const handler = async ({ parsedInput }: GetAvailableTimesArgs) => {
   });
 };
 
-import { withLogging } from "@/lib/action-wrapper";
-
 export const getAvailableTimes = protectedWithClinicActionClient
   .schema(
     z.object({
@@ -89,4 +87,4 @@ export const getAvailableTimes = protectedWithClinicActionClient
       date: z.string().date(), // YYYY-MM-DD,
     }),
   )
-  .action(withLogging("getAvailableTimes", handler));
+  .action(handler);

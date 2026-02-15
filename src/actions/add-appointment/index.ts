@@ -28,10 +28,13 @@ const handler = async ({ parsedInput, ctx }: AddAppointmentArgs) => {
     doctorId: parsedInput.doctorId,
     date: dayjs(parsedInput.date).format("YYYY-MM-DD"),
   });
-  if (!availableTimes?.data) {
+  const availableTimesResult = availableTimes as unknown as {
+    data?: { value: string; available: boolean; label: string }[];
+  };
+  if (!availableTimesResult?.data) {
     throw new Error("No available times");
   }
-  const isTimeAvailable = availableTimes.data?.some(
+  const isTimeAvailable = availableTimesResult.data?.some(
     (time) => time.value === parsedInput.time && time.available,
   );
   if (!isTimeAvailable) {
@@ -52,8 +55,6 @@ const handler = async ({ parsedInput, ctx }: AddAppointmentArgs) => {
   revalidatePath("/dashboard");
 };
 
-import { withLogging } from "@/lib/action-wrapper";
-
 export const addAppointment = protectedWithClinicActionClient
   .schema(addAppointmentSchema)
-  .action(withLogging("addAppointment", handler));
+  .action(handler);

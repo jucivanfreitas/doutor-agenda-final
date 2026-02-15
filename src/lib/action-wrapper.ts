@@ -1,10 +1,11 @@
 import { logger } from "./logger";
 import { headers } from "next/headers";
 
-export function withLogging<
-  T extends (...args: unknown[]) => Promise<unknown> | unknown,
->(actionName: string, fn: T): T {
-  const wrapper = (async (...args: Parameters<T>): Promise<ReturnType<T>> => {
+export function withLogging(
+  actionName: string,
+  fn: (...args: unknown[]) => Promise<unknown> | unknown,
+): (...args: unknown[]) => Promise<unknown> {
+  const wrapper = async (...args: unknown[]): Promise<unknown> => {
     // Try to extract ctx from last argument if present (pattern used by next-safe-action)
     const maybeCtx = args[args.length - 1] as unknown;
     const isRecord = (v: unknown): v is Record<string, unknown> =>
@@ -18,7 +19,7 @@ export function withLogging<
           ? (maybeCtx as Record<string, unknown>)
           : undefined;
 
-    const hdrs = headers();
+    const hdrs = await headers();
     const correlationId = hdrs.get("x-correlation-id") ?? undefined;
 
     const requestCtx = {
@@ -57,14 +58,14 @@ export function withLogging<
     });
 
     try {
-      const result = await fn(...(args as Parameters<T>));
+      const result = await fn(...(args as unknown[]));
       logger.info(`${actionName} - success`, {
         correlationId: requestCtx.correlationId,
         userId: requestCtx.userId,
         clinicId: requestCtx.clinicId,
         module: actionName,
       });
-      return result as ReturnType<T>;
+      return result;
     } catch (err) {
       logger.error(`${actionName} - error`, {
         correlationId: requestCtx.correlationId,
@@ -75,7 +76,7 @@ export function withLogging<
       });
       throw err;
     }
-  }) as unknown as T;
+  };
 
   return wrapper;
 }

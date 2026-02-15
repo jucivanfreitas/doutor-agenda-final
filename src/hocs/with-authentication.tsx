@@ -34,13 +34,20 @@ const WithAuthentication = async ({
     clinicId: session.user.clinic?.id,
   };
 
-  if (mustHavePlan && !session.user.plan) {
-    logger.info("with-authentication: user has no plan", requestCtx);
-    redirect("/new-subscription");
-  }
-  if (mustHaveClinic && !session.user.clinic) {
-    logger.info("with-authentication: user has no clinic", requestCtx);
-    redirect("/clinic-form");
+  // NOTE: We intentionally removed automatic redirection for `mustHavePlan`.
+  // Plan validation will be handled in a later phase. We still enforce clinic
+  // membership when `mustHaveClinic` is requested.
+  if (mustHaveClinic) {
+    // resolve clinic id from session.user.clinic or fallback to service
+    const clinicId =
+      session.user.clinic?.id ??
+      (await import("@/services/clinic.service")).getActiveClinicId(
+        session.user.id,
+      );
+    if (!clinicId) {
+      logger.info("with-authentication: user has no clinic", requestCtx);
+      redirect("/clinic-form");
+    }
   }
 
   // render children (session valid)

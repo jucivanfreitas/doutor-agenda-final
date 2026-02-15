@@ -388,79 +388,102 @@ Raiz do projeto (visão resumida):
       2. Gerar tipos com `npx drizzle-kit generate` caso o schema mude.
       3. Executar `npx tsc --noEmit` para validar tipagem.
       4. Testar fluxo de login, criação de agendamento e webhooks Stripe em ambiente local.
+    ```
 
+  ***
 
-      Use o bloco abaixo para registrar mudanças de código, decisões importantes e informações relevantes para auditoria.
+  - Data: 2026-02-15
+  - Autor: VSCode Agent
+  - Tipo: feature (multi-tenant)
+  - Descrição curta: Ativação inicial multi-tenant — adição de `clinic_id` em tabelas core e serviço de resolução de clínica ativa.
+  - Detalhes: Foram adicionadas migrations para incluir a coluna `clinic_id` (nullable) em `doctors`, `patients` e `appointments` e índices de consulta. Foi adicionada uma migration de backfill que tenta popular `clinic_id` em `appointments` a partir de `doctors` e `patients` quando possível; não há suposições automáticas para `doctors`/`patients` sem vínculo claro a usuários. Também foi criado `src/services/clinic.service.ts` com `getActiveClinicId(userId)` para resolver a clínica ativa a partir de `users_to_clinics`. O HOC `src/hocs/with-authentication.tsx` foi adaptado para exigir que o usuário possua uma clínica quando `mustHaveClinic` é solicitado (usa `getActiveClinicId` como fallback).
+  - Arquivos alterados / adicionados:
+    - drizzle/20260215_add_clinic_id_to_core_tables.sql (novo)
+    - drizzle/20260215_backfill_clinic_id_core_tables.sql (novo)
+    - src/services/clinic.service.ts (novo)
+    - src/hocs/with-authentication.tsx (modificado)
+  - Branch/PR: migration/multi-tenant-phase1
+  - Notas de deploy/testes:
 
-      - Data: YYYY-MM-DD
-      - Autor: Nome do autor
-      - Tipo: (feature | bugfix | refactor | docs | infra)
-      - Descrição curta: Uma linha descrevendo a mudança
-      - Detalhes: Explicação breve do que foi alterado e por quê
-      - Arquivos alterados: lista de arquivos/paths
-      - Branch/PR: nome da branch ou link do PR
-      - Notas de deploy/testes: passos de verificação ou riscos
+    1. Aplicar as novas migrations: `npx drizzle-kit migrate`.
+    2. Verificar linhas com `clinic_id IS NULL` após rodar o backfill e resolver manualmente se necessário.
+    3. Não aplicar `ALTER ... SET NOT NULL` até confirmar que todas as linhas foram atualizadas.
+    4. Executar `npx tsc --noEmit` e testar os casos listados em "Testes Obrigatórios".
 
-      Exemplo:
+    Use o bloco abaixo para registrar mudanças de código, decisões importantes e informações relevantes para auditoria.
 
-      - Data: 2026-02-15
-      - Autor: Felipe Rocha
-      - Tipo: feature
-      - Descrição curta: Implementado endpoint de criação de consulta
-      - Detalhes: Adicionada action `add-appointment/index.ts` com validação e persistência no banco; atualizada UI para novo botão.
-      - Arquivos alterados:
-        - src/actions/add-appointment/index.ts
-        - src/app/(protected)/appointments/\_components/add-appointment-button.tsx
-      - Branch/PR: feature/add-appointment
-      - Notas de deploy/testes: Testar criação de agendamento via UI e validar entradas inválidas.
+    - Data: YYYY-MM-DD
+    - Autor: Nome do autor
+    - Tipo: (feature | bugfix | refactor | docs | infra)
+    - Descrição curta: Uma linha descrevendo a mudança
+    - Detalhes: Explicação breve do que foi alterado e por quê
+    - Arquivos alterados: lista de arquivos/paths
+    - Branch/PR: nome da branch ou link do PR
+    - Notas de deploy/testes: passos de verificação ou riscos
 
-      ---
+    Exemplo:
 
-      Arquivo criado para centralizar histórico de mudanças e instruções importantes relacionadas ao desenvolvimento local e às dependências externas (ex.: Stripe). Atualize este arquivo sempre que uma alteração relevante for feita ou quando houver mudanças de infraestrutura/fluxos críticos.
+    - Data: 2026-02-15
+    - Autor: Felipe Rocha
+    - Tipo: feature
+    - Descrição curta: Implementado endpoint de criação de consulta
+    - Detalhes: Adicionada action `add-appointment/index.ts` com validação e persistência no banco; atualizada UI para novo botão.
+    - Arquivos alterados:
+      - src/actions/add-appointment/index.ts
+      - src/app/(protected)/appointments/\_components/add-appointment-button.tsx
+    - Branch/PR: feature/add-appointment
+    - Notas de deploy/testes: Testar criação de agendamento via UI e validar entradas inválidas.
 
-      ## Registro de ações recentes e status
+    ***
 
-      - Data: 2026-02-15
+    Arquivo criado para centralizar histórico de mudanças e instruções importantes relacionadas ao desenvolvimento local e às dependências externas (ex.: Stripe). Atualize este arquivo sempre que uma alteração relevante for feita ou quando houver mudanças de infraestrutura/fluxos críticos.
 
-        - Ação: Criação do arquivo de auditoria `AUDIT.md` e adição inicial na raiz do projeto.
-        - Status: Concluído — arquivo criado em `AUDIT.md`.
+    ## Registro de ações recentes e status
 
-      - Data: 2026-02-15
+    - Data: 2026-02-15
 
-        - Ação: Movido `AUDIT.md` para `docs/AUDIT.md` e adicionado `/docs` ao `.gitignore`.
-        - Status: Concluído — arquivo agora em `docs/AUDIT.md` e `.gitignore` atualizado.
+      - Ação: Criação do arquivo de auditoria `AUDIT.md` e adição inicial na raiz do projeto.
+      - Status: Concluído — arquivo criado em `AUDIT.md`.
 
-      - Data: 2026-02-15
-        - Ação: Tentativa de instalar dependências e rodar a aplicação (`npm install` e `npm run dev`).
-        - Resultado / Status:
-          - `npm install` falhou com conflito de dependência (ERESOLVE) relacionado a `react-day-picker@8.10.1` — peer dependency exige `react` até `^18.0.0`, enquanto o projeto declarou `react@19.1.0`.
-          - Ao executar `npm run dev` sem instalação bem-sucedida, o comando `next` não foi encontrado (`'next' não é reconhecido`).
-          - Tentativa planejada de reinstalar com `--legacy-peer-deps` foi iniciada, mas o processo foi cancelado pelo usuário.
-        - Próximos passos recomendados:
-          1. Escolher uma estratégia para resolver o conflito de dependências:
-             - Rebaixar `react` para uma versão compatível (por exemplo `^18.x`) ou
-             - Atualizar/alterar dependências que não suportam `react@19` (verificar `react-day-picker` e bibliotecas relacionadas) ou
-             - Instalar usando `npm install --legacy-peer-deps` para forçar resolução temporária.
-          2. Rodar `npm install` com a estratégia escolhida.
-          3. Executar `npm run dev` e verificar se `next` está presente em `node_modules` e no `package.json` como dependência.
+    - Data: 2026-02-15
 
-      ---
+      - Ação: Movido `AUDIT.md` para `docs/AUDIT.md` e adicionado `/docs` ao `.gitignore`.
+      - Status: Concluído — arquivo agora em `docs/AUDIT.md` e `.gitignore` atualizado.
 
-      - Data: 2026-02-15
-      - Autor: VSCode Agent
-      - Tipo: bugfix
-      - Descrição curta: Corrige erro de null ao acessar `session.user` no `DashboardPage` (Server Component).
-      - Detalhes: O `DashboardPage` realizava uma chamada a `auth.api.getSession()` e em seguida acessava `session!.user.clinic!.id` sem tratar o caso de `session` ou `session.user.clinic` serem `null`. Em ambiente de Server Components essa leitura ocorria antes que o HOC `WithAuthentication` pudesse executar sua validação, causando um TypeError quando a sessão estava ausente. A correção adiciona checagens explícitas imediatamente após a chamada de sessão: redireciona para `/authentication` se `session` for nulo, e para `/clinic-form` se o usuário não tiver clínica associada. Assim, nunca tentamos acessar `.user` quando a sessão é nula.
-      - Arquivos alterados:
-        - src/app/(protected)/dashboard/page.tsx
-        - docs/AUDIT.md
-      - Branch/PR: main
-      - Notas de deploy/testes: Reproduzir fluxo sem sessão (abrir /dashboard em navegador sem cookie de sessão) — deve redirecionar para `/authentication`. Abrir com sessão sem clínica — deve redirecionar para `/clinic-form`. Com sessão e clínica válidas, o dashboard renderiza normalmente. Verificar logs do servidor para ausência de TypeError.
+    - Data: 2026-02-15
+      - Ação: Tentativa de instalar dependências e rodar a aplicação (`npm install` e `npm run dev`).
+      - Resultado / Status:
+        - `npm install` falhou com conflito de dependência (ERESOLVE) relacionado a `react-day-picker@8.10.1` — peer dependency exige `react` até `^18.0.0`, enquanto o projeto declarou `react@19.1.0`.
+        - Ao executar `npm run dev` sem instalação bem-sucedida, o comando `next` não foi encontrado (`'next' não é reconhecido`).
+        - Tentativa planejada de reinstalar com `--legacy-peer-deps` foi iniciada, mas o processo foi cancelado pelo usuário.
+      - Próximos passos recomendados:
+        1. Escolher uma estratégia para resolver o conflito de dependências:
+           - Rebaixar `react` para uma versão compatível (por exemplo `^18.x`) ou
+           - Atualizar/alterar dependências que não suportam `react@19` (verificar `react-day-picker` e bibliotecas relacionadas) ou
+           - Instalar usando `npm install --legacy-peer-deps` para forçar resolução temporária.
+        2. Rodar `npm install` com a estratégia escolhida.
+        3. Executar `npm run dev` e verificar se `next` está presente em `node_modules` e no `package.json` como dependência.
 
-      ---
+    ***
 
-      - Data: 2026-02-15
-      - Autor: VSCode Agent
+    - Data: 2026-02-15
+    - Autor: VSCode Agent
+    - Tipo: bugfix
+    - Descrição curta: Corrige erro de null ao acessar `session.user` no `DashboardPage` (Server Component).
+    - Detalhes: O `DashboardPage` realizava uma chamada a `auth.api.getSession()` e em seguida acessava `session!.user.clinic!.id` sem tratar o caso de `session` ou `session.user.clinic` serem `null`. Em ambiente de Server Components essa leitura ocorria antes que o HOC `WithAuthentication` pudesse executar sua validação, causando um TypeError quando a sessão estava ausente. A correção adiciona checagens explícitas imediatamente após a chamada de sessão: redireciona para `/authentication` se `session` for nulo, e para `/clinic-form` se o usuário não tiver clínica associada. Assim, nunca tentamos acessar `.user` quando a sessão é nula.
+    - Arquivos alterados:
+      - src/app/(protected)/dashboard/page.tsx
+      - docs/AUDIT.md
+    - Branch/PR: main
+    - Notas de deploy/testes: Reproduzir fluxo sem sessão (abrir /dashboard em navegador sem cookie de sessão) — deve redirecionar para `/authentication`. Abrir com sessão sem clínica — deve redirecionar para `/clinic-form`. Com sessão e clínica válidas, o dashboard renderiza normalmente. Verificar logs do servidor para ausência de TypeError.
+
+    ***
+
+    - Data: 2026-02-15
+    - Autor: VSCode Agent
+
+    ```
+
     ```
 
 ---
