@@ -1,4 +1,4 @@
-# Auditoria do Projeto — Doutor Agenda
+# Auditoria do Projeto — Pleno Psi
 
 ---
 
@@ -40,6 +40,14 @@
       1. Criar migration correspondente (drizzle) e aplicá-la no banco de dados.
       2. Inserir linha seed em `system_settings` com `app_name = "Pleno PSI"`.
       3. Iniciar a aplicação e verificar que a metadata do site é `Pleno PSI`.
+      - Data: 2026-02-15
+      - Autor: VSCode Agent
+      - Tipo: feature
+      - Descrição curta: Atualização do Sidebar com `system_settings`.
+      - Detalhes: Modificado o Sidebar para usar `system_settings` para nome e logo dinâmicos.
+      - Arquivos alterados:
+        - src/app/(protected)/layout.tsx (modificado — passa `system_settings` para Sidebar)
+        - src/app/(protected)/_components/app-sidebar.tsx (modificado — usa `system_settings` para nome e logo dinâmicos)
 
     ---
 
@@ -99,7 +107,7 @@
 
 ## O que é a aplicação
 
-Doutor Agenda é uma aplicação web para gerenciamento de clínicas, médicos, pacientes e agendamentos. Fornece painel administrativo, CRUD para médicos e pacientes, agendamento de consultas com verificação de horários disponíveis e integração com Stripe para funcionalidades de compra/subscrição.
+Pleno Psi é uma aplicação web para gerenciamento de clínicas, médicos, pacientes e agendamentos. Fornece painel administrativo, CRUD para médicos e pacientes, agendamento de consultas com verificação de horários disponíveis e integração com Stripe para funcionalidades de compra/subscrição.
 
 ## Estrutura principal de pastas e arquivos
 
@@ -133,11 +141,11 @@ Raiz do projeto (visão resumida):
     - delete-patient/
 
       ````markdown
-      # Auditoria do Projeto — Doutor Agenda
+      # Auditoria do Projeto — Pleno Psi
 
       ## O que é a aplicação
 
-      Doutor Agenda é uma aplicação web para gerenciamento de clínicas, médicos, pacientes e agendamentos. Fornece painel administrativo, CRUD para médicos e pacientes, agendamento de consultas com verificação de horários disponíveis e integração com Stripe para funcionalidades de compra/subscrição.
+      Pleno Psi é uma aplicação web para gerenciamento de clínicas, médicos, pacientes e agendamentos. Fornece painel administrativo, CRUD para médicos e pacientes, agendamento de consultas com verificação de horários disponíveis e integração com Stripe para funcionalidades de compra/subscrição.
 
       ## Estrutura principal de pastas e arquivos
 

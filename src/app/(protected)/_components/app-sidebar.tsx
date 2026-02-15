@@ -56,7 +56,11 @@ const items = [
   },
 ];
 
-export function AppSidebar() {
+type SystemSettings = Awaited<
+  ReturnType<typeof import("@/services/system.service").getSystemSettings>
+>;
+
+export function AppSidebar({ settings }: { settings?: SystemSettings | null }) {
   const router = useRouter();
   const session = authClient.useSession();
   const pathname = usePathname();
@@ -70,10 +74,14 @@ export function AppSidebar() {
       },
     });
   };
+  const appName = settings?.appName ?? "Pleno PSI";
+  const logoUrl = settings?.logoUrl ?? "/logo.svg";
+
   return (
     <Sidebar>
-      <SidebarHeader className="border-b p-4">
-        <Image src="/logo.svg" alt="Doutor Agenda" width={136} height={28} />
+      <SidebarHeader className="flex items-center gap-2 border-b p-4">
+        <Image src={logoUrl} alt={appName} width={136} height={28} priority />
+        <span className="text-lg font-semibold">{appName}</span>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
