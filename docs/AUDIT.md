@@ -392,13 +392,33 @@ Raiz do projeto (visão resumida):
         - Status: Concluído — arquivo agora em `docs/AUDIT.md` e `.gitignore` atualizado.
 
       - Data: 2026-02-15
+
         - Ação: Tentativa de instalar dependências e rodar a aplicação (`npm install` e `npm run dev`).
         - Resultado / Status:
           - `npm install` falhou com conflito de dependência (ERESOLVE) relacionado a `react-day-picker@8.10.1` — peer dependency exige `react` até `^18.0.0`, enquanto o projeto declarou `react@19.1.0`.
           - Ao executar `npm run dev` sem instalação bem-sucedida, o comando `next` não foi encontrado (`'next' não é reconhecido`).
           - Tentativa planejada de reinstalar com `--legacy-peer-deps` foi iniciada, mas o processo foi cancelado pelo usuário.
         - Próximos passos recomendados:
-          1. Escolher uma estratégia para resolver o conflito de dependências:
+          - (continuação) Verificar falhas remanescentes nos testes E2E e ajustar validações de Origin quando necessário.
+
+        ***
+
+        - Data: 2026-02-16
+          - Autor: Desenvolvedor (execução manual)
+          - Tipo: verification/manual
+          - Descrição curta: Verificação manual do fluxo de autenticação, pagamento Stripe e criação de clínica
+          - Detalhes:
+            - Realizado login com: `testelogin4@gmail.com` (senha usada localmente: `testelogin4`).
+            - Fluxo de pagamento Stripe: checkout completado com sucesso usando conta de teste; webhook processado pelo endpoint e atualização no banco confirmada.
+            - Após pagamento, foi possível criar o nome da clínica para esse usuário e verificar persistência no banco.
+          - Arquivos / observações relacionadas:
+            - Migration aplicada: `drizzle/0000_numerous_whiplash.sql` (criação de `stripe_events` e adição de `users.plan_updated_at`).
+            - Webhook hardened: `src/app/api/stripe/webhook/route.ts` (idempotência e validações ativas).
+          - Resultado: fluxo de compra e pós-pagamento validado manualmente para o usuário acima.
+
+        Observação de segurança: as credenciais mencionadas foram usadas apenas para testes locais; considere remover credenciais de teste do repositório e rotacioná-las quando apropriado.
+
+        1. Escolher uma estratégia para resolver o conflito de dependências:
 
       ### Infra: Suíte de Testes Automatizados (Vitest + Playwright)
 
@@ -637,3 +657,27 @@ Raiz do projeto (visão resumida):
   5. Testar `invoice.paid` com casos: (a) invoice metadata.userId, (b) subscription metadata.userId, (c) apenas stripe customer id — sistema deve resolver o usuário corretamente ou logar warning sem conceder plano.
 
 Status: alterações aplicadas no código; requer migração DB e validação em ambiente de testes.
+
+---
+
+- Data: 2026-02-16
+- Autor: VSCode Agent
+- Tipo: tests/infra
+- Descrição curta: E2E setup programático — remoção de dependência de UI para autenticação
+- Detalhes:
+  - Objetivo: tornar `tests/e2e/00_setup.spec.ts` determinístico e independente de cliques/tab UI.
+  - Alterações:
+    - `tests/e2e/00_setup.spec.ts` convertido para usar `request.post` contra `/api/auth/sign-up/email` e `/api/auth/sign-in/email`, gerar `storageState` programaticamente e salvar `tests/.auth/userA.json` e `tests/.auth/userB.json`.
+    - `tests/e2e/multitenant.spec.ts` atualizado para pular quando os arquivos `.auth` estiverem ausentes, usar `browser.newContext({ storageState })` e criar paciente via API quando possível (fallback UI mínimo).
+  - Execução local:
+    - Rodei `npx playwright test tests/e2e/00_setup.spec.ts` — o teste completou e os arquivos `tests/.auth/userA.json` e `tests/.auth/userB.json` foram gerados (podem conter `cookies: []` se a API de autenticação não emitir cookies na requisição programática).
+    - Observação: no ambiente atual o endpoint `POST /api/auth/sign-in/email` retornou HTTP 500 durante a execução aqui, logo os `storageState` gerados não continham cookies válidos. Logs e avisos foram registrados no teste para diagnóstico.
+  - Recomendações:
+    1. Preferível: implementar um endpoint de teste seguro para CI/dev (ex.: `/api/test/create-session`) que crie sessões e retorne `storageState` diretamente — permite E2E determinísticos sem depender do fluxo de UI ou magic links.
+    2. Alternativa: corrigir o fluxo `/api/auth/sign-in/email` local (verificar `BETTER_AUTH_BASE_URL`, adapter Drizzle e variáveis de ambiente) para que o login programático gere cookies de sessão quando chamado via Playwright `request`.
+    3. Validar que `tests/.auth/*.json` contenham cookies antes de rodar `multitenant.spec.ts` em CI; o teste já pula quando faltam arquivos.
+  - Arquivos alterados:
+    - tests/e2e/00_setup.spec.ts
+    - tests/e2e/multitenant.spec.ts
+  - Branch/PR: migration/pleno-psi
+  - Status: committed — testes atualizados e commit criado (`test(e2e): programmatic setup and multitenant use storageState (no UI)`).
