@@ -220,74 +220,75 @@ Raiz do projeto (visão resumida):
           - get-dashboard.ts
         - db/
 
-          - index.ts
-          - schema.ts - Autor: VSCode Agent - Tipo: infra - Título: Estabilização do ambiente local — limpeza, reinstalação e checagem TypeScript - Descrição: - Objetivo: resolver erros de bloqueio (EPERM), limpar build/cache e reinstalar dependências para retornar o ambiente local a um estado funcional e permitir correções de TypeScript. - Ações executadas: 1. Encerrados todos os processos `node.exe` locais (`taskkill /F /IM node.exe`). 2. Removidos caches e build: `.next`, `node_modules` (tentativa) e `package-lock.json`. 3. Reinstaladas dependências com `npm install --legacy-peer-deps` para contornar conflitos temporários de peer-deps. 4. Executado `npx tsc --noEmit` para identificar erros TypeScript. - Comandos principais executados:
-            `powershell
-      taskkill /F /IM node.exe
-      Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
-      Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
-      Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue
-      npm install --legacy-peer-deps
-      npx tsc --noEmit
-      ` - Resultados / Observações: - `npm install --legacy-peer-deps` concluiu (adicionou 499 pacotes), porém apresentou avisos de engine/deprecação e mensagens de limpeza com falhas (EPERM) em módulos nativos ao remover artefatos — isso é típico em Windows quando handles ainda estão abertos. - `npx tsc --noEmit` reportou 18 erros TypeScript em 6 arquivos. Arquivos com problemas (resumo): - `src/actions/add-appointment/index.ts` (tipos implícitos e incompatibilidade com wrappers) - `src/actions/get-available-times/index.ts` (tipagem/wrappers) - `src/actions/create-stripe-checkout/index.ts` (apiVersion string mismatch) - `src/app/(protected)/appointments/_components/add-appointment-form.tsx` (parâmetro `time` sem tipo) - `src/app/api/stripe/webhook/route.ts` (tipos Stripe: propriedade `subscription`/apiVersion) - `src/lib/action-wrapper.ts` (uso de `headers()` sem `await`) - Ao iniciar `npm run dev` o processo tentou acessar `.next/trace` e houve erro EPERM; recomendação: garantir que não há processos Node/VScode segurando arquivos e remover `.next` antes de reiniciar. - Riscos e recomendações: - Remoção forçada de `node_modules` e arquivos nativos pode falhar devido a locks no Windows; se persistir, reiniciar a máquina liberará handles. - Corrigir os 18 erros TypeScript antes de executar `npm run dev` para evitar execução parcial e problemas de runtime. - Próximos passos recomendados: 1. Encerrar quaisquer processos que possam manter handles (.e.g., VSCode/terminals) e/ou reiniciar a máquina. 2. Apagar `.next` e rodar `npx tsc --noEmit` novamente. 3. Aplicar correções de tipagem listadas (posso abrir um patch com mudanças mínimas): - adicionar tipos explícitos para parâmetros `time` e funções de action; - ajustar `await` em chamadas `headers()` quando necessário; - alinhar `apiVersion` Stripe ou usar casts temporários até atualizar types; - adaptar wrappers `withLogging` para aceitar a assinatura utilizada ou ajustar chamadas. 4. Reexecutar `npm install` se necessário e, com TS limpo, iniciar `npm run dev`.
+              - index.ts
+              - schema.ts - Autor: VSCode Agent - Tipo: infra - Título: Estabilização do ambiente local — limpeza, reinstalação e checagem TypeScript - Descrição: - Objetivo: resolver erros de bloqueio (EPERM), limpar build/cache e reinstalar dependências para retornar o ambiente local a um estado funcional e permitir correções de TypeScript. - Ações executadas: 1. Encerrados todos os processos `node.exe` locais (`taskkill /F /IM node.exe`). 2. Removidos caches e build: `.next`, `node_modules` (tentativa) e `package-lock.json`. 3. Reinstaladas dependências com `npm install --legacy-peer-deps` para contornar conflitos temporários de peer-deps. 4. Executado `npx tsc --noEmit` para identificar erros TypeScript. - Comandos principais executados:
+                `powershell
 
-                Status: estabilização iniciada — dependências reinstaladas; erros TypeScript reportados e bloqueios EPERM detectados. Aguardando aplicação das correções TS e limpeza completa de handles no sistema.
+          taskkill /F /IM node.exe
+          Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
+          Remove-Item -Force package-lock.json -ErrorAction SilentlyContinue
+          npm install --legacy-peer-deps
+          npx tsc --noEmit
+          `- Resultados / Observações: -`npm install --legacy-peer-deps`concluiu (adicionou 499 pacotes), porém apresentou avisos de engine/deprecação e mensagens de limpeza com falhas (EPERM) em módulos nativos ao remover artefatos — isso é típico em Windows quando handles ainda estão abertos. -`npx tsc --noEmit`reportou 18 erros TypeScript em 6 arquivos. Arquivos com problemas (resumo): -`src/actions/add-appointment/index.ts`(tipos implícitos e incompatibilidade com wrappers) -`src/actions/get-available-times/index.ts`(tipagem/wrappers) -`src/actions/create-stripe-checkout/index.ts`(apiVersion string mismatch) -`src/app/(protected)/appointments/\_components/add-appointment-form.tsx`(parâmetro`time`sem tipo) -`src/app/api/stripe/webhook/route.ts`(tipos Stripe: propriedade`subscription`/apiVersion) - `src/lib/action-wrapper.ts`(uso de`headers()`sem`await`) - Ao iniciar `npm run dev`o processo tentou acessar`.next/trace`e houve erro EPERM; recomendação: garantir que não há processos Node/VScode segurando arquivos e remover`.next`antes de reiniciar. - Riscos e recomendações: - Remoção forçada de`node_modules`e arquivos nativos pode falhar devido a locks no Windows; se persistir, reiniciar a máquina liberará handles. - Corrigir os 18 erros TypeScript antes de executar`npm run dev`para evitar execução parcial e problemas de runtime. - Próximos passos recomendados: 1. Encerrar quaisquer processos que possam manter handles (.e.g., VSCode/terminals) e/ou reiniciar a máquina. 2. Apagar`.next`e rodar`npx tsc --noEmit`novamente. 3. Aplicar correções de tipagem listadas (posso abrir um patch com mudanças mínimas): - adicionar tipos explícitos para parâmetros`time`e funções de action; - ajustar`await`em chamadas`headers()`quando necessário; - alinhar`apiVersion`Stripe ou usar casts temporários até atualizar types; - adaptar wrappers`withLogging`para aceitar a assinatura utilizada ou ajustar chamadas. 4. Reexecutar`npm install`se necessário e, com TS limpo, iniciar`npm run dev`.
 
-                ***
+                    Status: estabilização iniciada — dependências reinstaladas; erros TypeScript reportados e bloqueios EPERM detectados. Aguardando aplicação das correções TS e limpeza completa de handles no sistema.
 
-                - Data: 2026-02-16
-                  - Autor: VSCode Agent
-                  - Tipo: bug/security
-                  - Título: Falha de login — Better Auth (baseURL não detectado + Drizzle adapter)
-                  - Descrição:
-                    - Durante validações após reinstalação e testes, foram observados erros ao tentar efetuar sign-in por e-mail via Better Auth. O problema afeta callbacks/redirects e a integração com o adapter Drizzle.
-                    - Logs relevantes encontrados no servidor de desenvolvimento:
+                    ***
 
-                ```
-                GET /.well-known/appspecific/com.chrome.devtools.json 404 in 4648ms
-                GET /favicon.ico 200 in 2925ms
-                ○ Compiling /api/auth/[...all] ...
-                ✓ Compiled /api/auth/[...all] in 1583ms (6528 modules)
-                2026-02-16T00:40:19.351Z WARN [Better Auth]: [better-auth] Base URL could not be determined. Please set a valid base URL using the baseURL config option or the BETTER_AUTH_BASE_URL environment variable. Without this, callbacks and redirects may not work correctly.
-                GET /authentication 200 in 147ms
-                2026-02-16T00:40:21.013Z WARN [Better Auth]: [better-auth] Base URL could not be determined. Please set a valid base URL using the baseURL config option or the BETTER_AUTH_BASE_URL environment variable. Without this, callbacks and redirects may not work correctly.
-                2026-02-16T00:40:21.049Z ERROR [Better Auth]: BetterAuthError [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
-                # SERVER_ERROR:  [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
-                POST /api/auth/sign-in/email 500 in 4138ms
-                2026-02-16T00:40:33.517Z ERROR [Better Auth]: BetterAuthError [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
-                # SERVER_ERROR:  [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
-                POST /api/auth/sign-in/email 500 in 27ms
-                2026-02-16T00:40:35.047Z WARN [Better Auth]: [better-auth] Base URL could not be determined. Please set a valid base URL using the baseURL config option or the BETTER_AUTH_BASE_URL environment variable. Without this, callbacks and redirects may not work correctly.
-                2026-02-16T00:40:58.631Z ERROR [Better Auth]: BetterAuthError [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
-                # SERVER_ERROR:  [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
-                POST /api/auth/sign-in/email 500 in 28ms
-                2026-02-16T00:41:00.187Z WARN [Better Auth]: [better-auth] Base URL could not be determined. Please set a valid base URL using the baseURL config option or the BETTER_AUTH_BASE_URL environment variable. Without this, callbacks and redirects may not work correctly.
-                ```
+                    - Data: 2026-02-16
+                      - Autor: VSCode Agent
+                      - Tipo: bug/security
+                      - Título: Falha de login — Better Auth (baseURL não detectado + Drizzle adapter)
+                      - Descrição:
+                        - Durante validações após reinstalação e testes, foram observados erros ao tentar efetuar sign-in por e-mail via Better Auth. O problema afeta callbacks/redirects e a integração com o adapter Drizzle.
+                        - Logs relevantes encontrados no servidor de desenvolvimento:
 
-                - Impacto:
-                  - Usuários não conseguem autenticar via `/api/auth/sign-in/email` (500) devido a erro no adapter.
-                  - Callbacks e redirects podem falhar por falta de `baseURL` — o fluxo de login pode apresentar redirecionamentos incorretos ou incompletos.
-                - Causa provável:
-                  - `BETTER_AUTH_BASE_URL` não está configurado no ambiente (ou `baseURL` não definido na config do `better-auth`).
-                  - Configuração do adapter Drizzle está apontando para um modelo nomeado incorretamente (`usersTables` em vez de `usersTable` ou equivalente), ou o objeto `schema` passado ao adapter não contém o nome esperado.
-                - Correções recomendadas:
-                  1. Definir variável de ambiente `BETTER_AUTH_BASE_URL` para o endereço utilizado no dev (ex.: `http://localhost:3000`) ou configurar `baseURL` nas opções do `better-auth` no `src/lib/auth.ts`.
-                  2. Verificar a configuração do adapter Drizzle em `src/lib/auth.ts` (ou onde o adapter é instanciado) e garantir que o `schema`/`models` referenciem o nome correto do model (`usersTable` conforme `src/db/schema.ts`). Se necessário, passar o objeto `schema` diretamente nas opções do adapter conforme a mensagem de erro.
-                  3. Após ajustes, reiniciar o servidor (ou reiniciar a máquina se houver locks) e testar o fluxo de sign-in.
-                - Comandos de verificação:
+                    ```
+                    GET /.well-known/appspecific/com.chrome.devtools.json 404 in 4648ms
+                    GET /favicon.ico 200 in 2925ms
+                    ○ Compiling /api/auth/[...all] ...
+                    ✓ Compiled /api/auth/[...all] in 1583ms (6528 modules)
+                    2026-02-16T00:40:19.351Z WARN [Better Auth]: [better-auth] Base URL could not be determined. Please set a valid base URL using the baseURL config option or the BETTER_AUTH_BASE_URL environment variable. Without this, callbacks and redirects may not work correctly.
+                    GET /authentication 200 in 147ms
+                    2026-02-16T00:40:21.013Z WARN [Better Auth]: [better-auth] Base URL could not be determined. Please set a valid base URL using the baseURL config option or the BETTER_AUTH_BASE_URL environment variable. Without this, callbacks and redirects may not work correctly.
+                    2026-02-16T00:40:21.049Z ERROR [Better Auth]: BetterAuthError [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
+                    # SERVER_ERROR:  [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
+                    POST /api/auth/sign-in/email 500 in 4138ms
+                    2026-02-16T00:40:33.517Z ERROR [Better Auth]: BetterAuthError [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
+                    # SERVER_ERROR:  [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
+                    POST /api/auth/sign-in/email 500 in 27ms
+                    2026-02-16T00:40:35.047Z WARN [Better Auth]: [better-auth] Base URL could not be determined. Please set a valid base URL using the baseURL config option or the BETTER_AUTH_BASE_URL environment variable. Without this, callbacks and redirects may not work correctly.
+                    2026-02-16T00:40:58.631Z ERROR [Better Auth]: BetterAuthError [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
+                    # SERVER_ERROR:  [Error [BetterAuthError]: [# Drizzle Adapter]: The model "usersTables" was not found in the schema object. Please pass the schema directly to the adapter options.]
+                    POST /api/auth/sign-in/email 500 in 28ms
+                    2026-02-16T00:41:00.187Z WARN [Better Auth]: [better-auth] Base URL could not be determined. Please set a valid base URL using the baseURL config option or the BETTER_AUTH_BASE_URL environment variable. Without this, callbacks and redirects may not work correctly.
+                    ```
 
-                  ```bash
-                  # verificar env
-                  grep -n "BETTER_AUTH_BASE_URL" .env* || echo "não definido"
+                    - Impacto:
+                      - Usuários não conseguem autenticar via `/api/auth/sign-in/email` (500) devido a erro no adapter.
+                      - Callbacks e redirects podem falhar por falta de `baseURL` — o fluxo de login pode apresentar redirecionamentos incorretos ou incompletos.
+                    - Causa provável:
+                      - `BETTER_AUTH_BASE_URL` não está configurado no ambiente (ou `baseURL` não definido na config do `better-auth`).
+                      - Configuração do adapter Drizzle está apontando para um modelo nomeado incorretamente (`usersTables` em vez de `usersTable` ou equivalente), ou o objeto `schema` passado ao adapter não contém o nome esperado.
+                    - Correções recomendadas:
+                      1. Definir variável de ambiente `BETTER_AUTH_BASE_URL` para o endereço utilizado no dev (ex.: `http://localhost:3000`) ou configurar `baseURL` nas opções do `better-auth` no `src/lib/auth.ts`.
+                      2. Verificar a configuração do adapter Drizzle em `src/lib/auth.ts` (ou onde o adapter é instanciado) e garantir que o `schema`/`models` referenciem o nome correto do model (`usersTable` conforme `src/db/schema.ts`). Se necessário, passar o objeto `schema` diretamente nas opções do adapter conforme a mensagem de erro.
+                      3. Após ajustes, reiniciar o servidor (ou reiniciar a máquina se houver locks) e testar o fluxo de sign-in.
+                    - Comandos de verificação:
 
-                  # inspecionar configuração do auth
-                  sed -n '1,200p' src/lib/auth.ts
+                      ```bash
+                      # verificar env
+                      grep -n "BETTER_AUTH_BASE_URL" .env* || echo "não definido"
 
-                  # reiniciar dev
-                  npm run dev
-                  ```
+                      # inspecionar configuração do auth
+                      sed -n '1,200p' src/lib/auth.ts
 
-                - Observação: posso aplicar correções pontuais no repositório (ex.: setar `baseURL` em dev config e ajustar as chaves do schema passadas ao adapter). Deseja que eu faça essas alterações agora?
+                      # reiniciar dev
+                      npm run dev
+                      ```
+
+                    - Observação: posso aplicar correções pontuais no repositório (ex.: setar `baseURL` em dev config e ajustar as chaves do schema passadas ao adapter). Deseja que eu faça essas alterações agora?
 
         - helpers/
           - currency.ts
@@ -398,6 +399,52 @@ Raiz do projeto (visão resumida):
           - Tentativa planejada de reinstalar com `--legacy-peer-deps` foi iniciada, mas o processo foi cancelado pelo usuário.
         - Próximos passos recomendados:
           1. Escolher uma estratégia para resolver o conflito de dependências:
+
+      ### Infra: Suíte de Testes Automatizados (Vitest + Playwright)
+
+      - Data: 2026-02-16
+      - Autor: VSCode Agent
+      - Tipo: infrastructure
+      - Descrição curta: Introdução de suíte de testes unitários e E2E com Vitest e Playwright
+      - Detalhes:
+
+        - Ações realizadas:
+
+          1. Instaladas dependências de teste (Vitest, @testing-library, jsdom) e Playwright (`@playwright/test`). Algumas instalações exigiram `--legacy-peer-deps` devido a conflitos de peer deps no ambiente local.
+          2. Criados arquivos de configuração e testes iniciais:
+             - `vitest.config.mjs` — configuração Vitest (environment: jsdom).
+             - `tests/setup.ts` — setup do Testing Library.
+             - `tests/unit/getRequiredClinicId.test.ts` — testes unitários para `getRequiredClinicId`.
+             - `src/lib/getRequiredClinicId.ts` — helper implementado para facilitar testes.
+             - `tests/e2e/auth.spec.ts` — scaffold Playwright E2E para fluxo de autenticação (placeholder).
+             - `tests/e2e/multitenant.spec.ts` — scaffold Playwright E2E para testes multi-tenant (placeholder).
+             - `playwright.config.ts` — configura Playwright para iniciar `npm run dev` automaticamente antes dos testes.
+          3. Committed e push das alterações em branches dedicadas:
+             - `feature/tests/unit` — configurações e testes unitários.
+             - `feature/tests/integration` — Playwright config e testes E2E scaffolding.
+          4. Instalados navegadores Playwright com `npx playwright install`.
+
+        - Execução/Resultados:
+
+          - Unit tests: `npm run test` com Vitest encontrou problemas de compatibilidade ESM/CJS em algumas dependências no ambiente local; adicionei `vitest.config.mjs` e ajustes, porém a execução local pode variar conforme versão do Node e das dependências. Arquivos de teste unitário foram adicionados e committed em `feature/tests/unit`.
+          - E2E: `npx playwright test` executado com sucesso iniciando o dev server automaticamente; dos 2 testes scaffold:
+            - `authentication` (placeholder) — passou (verificou carregamento da página);
+            - `multitenant` (placeholder) — falhou porque o título da página esperada (`Doutor Agenda`) não foi encontrado (recebido `Create Next App`). O teste é um placeholder e requer implementação de login programático e criação/isolamento de dados para validar corretamente.
+
+        - Comandos executados:
+
+        ```powershell
+        npm install --legacy-peer-deps
+        npm install -D @playwright/test --legacy-peer-deps
+        npx playwright install
+        npm run test      # vitest
+        npx playwright test
+        ```
+
+        - Próximos passos recomendados:
+          1. Implementar helpers de teste para autenticação (login programático) e APIs de criação/remoção de dados para usar nos E2E (fixtures).
+          2. Ajustar ou fixar versões de dependências que causam incompatibilidade ESM/CJS para execução estável do Vitest localmente (ou executar em CI com Node compatível).
+          3. Preencher os placeholders dos testes E2E com fluxos reais (emails de magic link ou credenciais de teste) e validar isolamento multi-tenant via criação/consulta direta ao DB.
       ````
 
 ### Correção: Better Auth + Drizzle Adapter
