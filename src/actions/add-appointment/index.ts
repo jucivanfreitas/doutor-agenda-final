@@ -32,7 +32,8 @@ const handler = async ({ parsedInput, ctx }: AddAppointmentArgs) => {
     throw new Error("No available times");
   }
   const isTimeAvailable = availableTimes.data?.some(
-    (time) => time.value === parsedInput.time && time.available,
+    (time: { value: string; available: boolean }) =>
+      time.value === parsedInput.time && time.available,
   );
   if (!isTimeAvailable) {
     throw new Error("Time not available");

@@ -16,7 +16,7 @@ export const POST = async (request: Request) => {
   }
   const text = await request.text();
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2025-05-28.basil",
+    apiVersion: "2025-08-27.basil",
   });
   let event: Stripe.Event;
   try {
@@ -98,21 +98,22 @@ export const POST = async (request: Request) => {
             invoiceId: invoice.id ?? null,
             customer: invoice.customer ?? null,
             metadata: invoice.metadata ?? null,
-            subscription: invoice.subscription ?? null,
+            subscription: (invoice as any).subscription ?? null,
           },
         });
         let userId: string | undefined = undefined;
+        const invoiceSub = (invoice as any).subscription;
         // Try invoice metadata first
         if (invoice.metadata && (invoice.metadata as any).userId) {
           userId = (invoice.metadata as any).userId as string;
         }
         // If subscription id present, fetch subscription metadata
-        if (!userId && invoice.subscription) {
+        if (!userId && invoiceSub) {
           try {
             const subscriptionId =
-              typeof invoice.subscription === "string"
-                ? invoice.subscription
-                : invoice.subscription.id;
+              typeof invoiceSub === "string"
+                ? invoiceSub
+                : (invoiceSub as any).id;
             const subscription =
               await stripe.subscriptions.retrieve(subscriptionId);
             if (
@@ -143,10 +144,10 @@ export const POST = async (request: Request) => {
         const result = await db
           .update(usersTable)
           .set({
-            stripeSubscriptionId: invoice.subscription
-              ? typeof invoice.subscription === "string"
-                ? invoice.subscription
-                : invoice.subscription.id
+            stripeSubscriptionId: invoiceSub
+              ? typeof invoiceSub === "string"
+                ? invoiceSub
+                : (invoiceSub as any).id
               : null,
             stripeCustomerId: customer ?? null,
             plan: "PRO",

@@ -11,7 +11,7 @@ export const createStripeCheckout = protectedActionClient.action(
       throw new Error("Stripe secret key not found");
     }
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2025-05-28.basil",
+      apiVersion: "2025-08-27.basil",
     });
     const metadata = { userId: ctx.user.id };
     logger.info("create-stripe-checkout: creating session", {

@@ -10,9 +10,10 @@ import { usersTable, usersToClinicsTable } from "@/db/schema";
 const FIVE_MINUTES = 5 * 60;
 
 export const auth = betterAuth({
+  baseURL: process.env.BETTER_AUTH_BASE_URL,
   database: drizzleAdapter(db, {
     provider: "pg",
-    usePlural: true,
+    usePlural: false,
     schema,
   }),
   socialProviders: {

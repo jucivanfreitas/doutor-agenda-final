@@ -59,11 +59,11 @@ const handler = async ({ parsedInput }: GetAvailableTimesArgs) => {
     .set("minute", Number(doctor.availableToTime.split(":")[1]))
     .set("second", 0)
     .local();
-  const doctorTimeSlots = timeSlots.filter((time) => {
+  const doctorTimeSlots = timeSlots.filter((time: string) => {
     const date = dayjs()
       .utc()
-      .set("hour", Number(time.split(":")[0]))
-      .set("minute", Number(time.split(":")[1]))
+      .set("hour", Number((time as string).split(":")[0]))
+      .set("minute", Number((time as string).split(":")[1]))
       .set("second", 0);
 
     return (
@@ -71,7 +71,7 @@ const handler = async ({ parsedInput }: GetAvailableTimesArgs) => {
       date.format("HH:mm:ss") <= doctorAvailableTo.format("HH:mm:ss")
     );
   });
-  return doctorTimeSlots.map((time) => {
+  return doctorTimeSlots.map((time: string) => {
     return {
       value: time,
       available: !appointmentsOnSelectedDate.includes(time),
