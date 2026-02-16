@@ -7,10 +7,12 @@ export default defineConfig({
     timeout: 120000,
     reuseExistingServer: !process.env.CI,
   },
+  fullyParallel: false,
+  retries: 0,
   use: {
-      baseURL: "http://localhost:3000",
-      headless: true,
-      // Default storageState can be overridden per-context in tests
-      storageState: undefined,
+    baseURL: "http://localhost:3000",
+    headless: true,
+    // Default storageState can be overridden per-context in tests
+    storageState: undefined,
   },
 });

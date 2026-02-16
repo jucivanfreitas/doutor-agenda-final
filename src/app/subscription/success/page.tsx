@@ -9,13 +9,15 @@ import { eq } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 
 type Props = {
-  searchParams?: { session_id?: string };
+  // Next 13+ PageProps may provide `searchParams` as a Promise in App Router
+  searchParams?: Promise<any> | undefined;
 };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const SuccessPage = async ({ searchParams }: Props) => {
-  const sessionId = searchParams?.session_id ?? null;
+  const resolvedSearchParams = await searchParams;
+  const sessionId = resolvedSearchParams?.session_id ?? null;
   logger.info("subscription.success: page requested", {
     module: "subscription.success",
     metadata: { sessionId },
@@ -24,10 +26,13 @@ const SuccessPage = async ({ searchParams }: Props) => {
   const hdrs = await headers();
   const session = await auth.api.getSession({ headers: hdrs });
   if (!session) {
-    logger.info("subscription.success: no session, redirecting to authentication", {
-      module: "subscription.success",
-      metadata: { sessionId },
-    });
+    logger.info(
+      "subscription.success: no session, redirecting to authentication",
+      {
+        module: "subscription.success",
+        metadata: { sessionId },
+      },
+    );
     redirect("/authentication");
   }
 
@@ -36,17 +41,22 @@ const SuccessPage = async ({ searchParams }: Props) => {
   // Check immediately and then poll up to 5 seconds
   const maxAttempts = 5;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
+    const user = await db.query.usersTable.findFirst({
+      where: eq(usersTable.id, userId),
+    });
     const plan = user?.plan ?? null;
     logger.info("subscription.success: plan check", {
       module: "subscription.success",
       metadata: { sessionId, userId, plan, attempt },
     });
     if (plan) {
-      logger.info("subscription.success: plan active, redirecting to dashboard", {
-        module: "subscription.success",
-        metadata: { sessionId, userId, plan, waitedMs: attempt * 1000 },
-      });
+      logger.info(
+        "subscription.success: plan active, redirecting to dashboard",
+        {
+          module: "subscription.success",
+          metadata: { sessionId, userId, plan, waitedMs: attempt * 1000 },
+        },
+      );
       redirect("/dashboard");
     }
     // wait 1s before next check
@@ -54,17 +64,26 @@ const SuccessPage = async ({ searchParams }: Props) => {
   }
 
   // If still not active after polling, render a waiting page with meta-refresh
-  logger.info("subscription.success: plan not active after wait, rendering waiting page", {
-    module: "subscription.success",
-    metadata: { sessionId, userId },
-  });
+  logger.info(
+    "subscription.success: plan not active after wait, rendering waiting page",
+    {
+      module: "subscription.success",
+      metadata: { sessionId, userId },
+    },
+  );
 
   return (
     <WithAuthentication mustHaveClinic>
       <div className="mx-auto max-w-xl p-8 text-center">
         <h1 className="text-2xl font-semibold">Confirmando assinatura</h1>
-        <p className="mt-4">Aguardando confirmação do pagamento. Esta página será atualizada automaticamente.</p>
-        <p className="mt-2 text-sm text-muted-foreground">Se a confirmação não ocorrer em até alguns segundos, atualize manualmente.</p>
+        <p className="mt-4">
+          Aguardando confirmação do pagamento. Esta página será atualizada
+          automaticamente.
+        </p>
+        <p className="text-muted-foreground mt-2 text-sm">
+          Se a confirmação não ocorrer em até alguns segundos, atualize
+          manualmente.
+        </p>
         <meta httpEquiv="refresh" content="5" />
       </div>
     </WithAuthentication>

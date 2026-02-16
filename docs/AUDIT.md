@@ -442,11 +442,13 @@ Raiz do projeto (visão resumida):
         ```
 
         - Próximos passos recomendados:
+
           1. Implementar helpers de teste para autenticação (login programático) e APIs de criação/remoção de dados para usar nos E2E (fixtures).
           2. Ajustar ou fixar versões de dependências que causam incompatibilidade ESM/CJS para execução estável do Vitest localmente (ou executar em CI com Node compatível).
           3. Preencher os placeholders dos testes E2E com fluxos reais (emails de magic link ou credenciais de teste) e validar isolamento multi-tenant via criação/consulta direta ao DB.
 
         - Atualização: Implementação inicial de login programático e fixtures
+
           - Criei `tests/e2e/00_setup.spec.ts` para gerar `tests/.auth/userA.json` e `tests/.auth/userB.json` a partir das credenciais em variáveis de ambiente (`TEST_USER_A_EMAIL`, `TEST_USER_A_PASSWORD`, `TEST_USER_B_EMAIL`, `TEST_USER_B_PASSWORD`).
           - Atualizei `tests/e2e/multitenant.spec.ts` para usar os `storageState` gerados e validar isolamento criando um paciente com `userA` e confirmando que `userB` não vê esse paciente.
           - Atualizei `playwright.config.ts` para permitir carregamento de `storageState` por contexto.
@@ -458,7 +460,6 @@ Raiz do projeto (visão resumida):
           ```
 
           - Resultado esperado: arquivos `tests/.auth/userA.json` e `tests/.auth/userB.json` criados contendo o estado de sessão.
-
       ````
 
 ### Correção: Better Auth + Drizzle Adapter
@@ -599,3 +600,40 @@ Raiz do projeto (visão resumida):
     - Evitei uso de `any` e `as any` em novos arquivos — tipos explícitos foram adicionados para handlers instrumentados.
     - O escopo implementado foca numa instrumentação mínima e segura. Para cobertura completa, recomenda-se (próximo passo) aplicar `withLogging` a todas actions em `src/actions/` e instrumentar pontos adicionais (auth, stripe webhooks) conforme descrito em `ENTERPRISE_LOGGING_SETUP.md`.
     ```
+
+---
+
+- Data: 2026-02-16
+- Autor: VSCode Agent
+- Tipo: security/hardening
+- Descrição curta: Harden Stripe Webhook — idempotência, validações e logs estruturados
+- Detalhes:
+
+  - Corrigido `searchParams` em `src/app/subscription/success/page.tsx` para compatibilidade Next App Router (await searchParams).
+  - Adicionada tabela `stripe_events` (`src/db/schema.ts`) para registro de eventos processados e prevenção de duplicidade (idempotência).
+  - Webhook (`src/app/api/stripe/webhook/route.ts`) fortalecido:
+    - Verificação explícita de `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET` com logs em nível `fatal` quando ausentes.
+    - Idempotência: checagem pré-processamento em `stripe_events` e inserção após sucesso.
+    - `invoice.paid` agora realiza múltiplos fallbacks para resolver `userId`: invoice.metadata -> subscription.metadata (com validação de status e period_end) -> lookup por `stripeCustomerId` no banco.
+    - Atualizações de plano incluem `planUpdatedAt` (campo adicionado em `users`), `stripeCustomerId` e `stripeSubscriptionId` e verificações do `rowCount` para garantir consistência; falha em atualizar resulta em log `fatal`.
+    - Logs padronizados e estruturados contendo: `eventId`, `eventType`, `userId`, `stripeCustomerId`, `stripeSubscriptionId`, `processedAt`, `correlationId`.
+    - Proteções adicionais: validação de status de subscription (`active`) e `current_period_end` antes de conceder plano PRO.
+  - Testes: adicionado teste unitário básico (`tests/unit/stripe-webhook.test.ts`) cobrindo comportamento de secret ausente e placeholders para testes de idempotência e fallbacks.
+
+- Arquivos alterados / adicionados:
+
+  - src/app/subscription/success/page.tsx (fix searchParams)
+  - src/db/schema.ts (add `stripe_events` table, `planUpdatedAt` field in `users`)
+  - src/app/api/stripe/webhook/route.ts (hardened webhook)
+  - tests/unit/stripe-webhook.test.ts (unit test for secret check)
+
+- Branch/PR: migration/pleno-psi (applied hardening changes)
+
+- Notas de deploy/testes:
+  1. Atualize o schema do banco (migração) para criar `stripe_events` e adicionar a coluna `plan_updated_at` em `users`.
+  2. Configure as variáveis de ambiente `STRIPE_SECRET_KEY` e `STRIPE_WEBHOOK_SECRET` antes de iniciar o servidor.
+  3. Iniciar a aplicação: `npm run dev` e executar `stripe listen --forward-to localhost:3000/api/stripe/webhook` para testes locais.
+  4. Para validar idempotência: reenviar o mesmo evento do Stripe — webhook deve retornar 200 sem reprocessar e inserir apenas uma entrada em `stripe_events`.
+  5. Testar `invoice.paid` com casos: (a) invoice metadata.userId, (b) subscription metadata.userId, (c) apenas stripe customer id — sistema deve resolver o usuário corretamente ou logar warning sem conceder plano.
+
+Status: alterações aplicadas no código; requer migração DB e validação em ambiente de testes.
