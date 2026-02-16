@@ -8,7 +8,9 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
   },
   use: {
-    baseURL: "http://localhost:3000",
-    headless: true,
+      baseURL: "http://localhost:3000",
+      headless: true,
+      // Default storageState can be overridden per-context in tests
+      storageState: undefined,
   },
 });

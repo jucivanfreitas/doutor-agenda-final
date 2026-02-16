@@ -445,6 +445,20 @@ Raiz do projeto (visão resumida):
           1. Implementar helpers de teste para autenticação (login programático) e APIs de criação/remoção de dados para usar nos E2E (fixtures).
           2. Ajustar ou fixar versões de dependências que causam incompatibilidade ESM/CJS para execução estável do Vitest localmente (ou executar em CI com Node compatível).
           3. Preencher os placeholders dos testes E2E com fluxos reais (emails de magic link ou credenciais de teste) e validar isolamento multi-tenant via criação/consulta direta ao DB.
+
+        - Atualização: Implementação inicial de login programático e fixtures
+          - Criei `tests/e2e/00_setup.spec.ts` para gerar `tests/.auth/userA.json` e `tests/.auth/userB.json` a partir das credenciais em variáveis de ambiente (`TEST_USER_A_EMAIL`, `TEST_USER_A_PASSWORD`, `TEST_USER_B_EMAIL`, `TEST_USER_B_PASSWORD`).
+          - Atualizei `tests/e2e/multitenant.spec.ts` para usar os `storageState` gerados e validar isolamento criando um paciente com `userA` e confirmando que `userB` não vê esse paciente.
+          - Atualizei `playwright.config.ts` para permitir carregamento de `storageState` por contexto.
+          - Comando executado para criação de storage states (exemplo):
+
+          ```powershell
+          # export TEST_USER_A_EMAIL=... TEST_USER_A_PASSWORD=... TEST_USER_B_EMAIL=... TEST_USER_B_PASSWORD=...
+          npx playwright test tests/e2e/00_setup.spec.ts
+          ```
+
+          - Resultado esperado: arquivos `tests/.auth/userA.json` e `tests/.auth/userB.json` criados contendo o estado de sessão.
+
       ````
 
 ### Correção: Better Auth + Drizzle Adapter
