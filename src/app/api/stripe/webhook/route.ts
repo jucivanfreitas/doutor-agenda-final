@@ -3,12 +3,23 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { db } from "@/db";
-import { usersTable } from "@/db/schema";
+import { usersTable, stripeEventsTable } from "@/db/schema";
 import { logger } from "@/lib/logger";
 
 export const POST = async (request: Request) => {
-  if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
-    throw new Error("Stripe secret key not found");
+  if (!process.env.STRIPE_SECRET_KEY) {
+    logger.error("stripe.webhook: STRIPE_SECRET_KEY missing", {
+      module: "stripe.webhook",
+      metadata: { level: "fatal" },
+    });
+    throw new Error("Stripe secret key not configured");
+  }
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    logger.error("stripe.webhook: STRIPE_WEBHOOK_SECRET missing", {
+      module: "stripe.webhook",
+      metadata: { level: "fatal" },
+    });
+    throw new Error("Stripe webhook secret not configured");
   }
   const signature = request.headers.get("stripe-signature");
   if (!signature) {
@@ -37,6 +48,18 @@ export const POST = async (request: Request) => {
   });
 
   try {
+    // Idempotency check: has this event been processed?
+    const existing = await db.query.stripeEventsTable.findFirst({
+      where: eq(stripeEventsTable.id, event.id),
+    });
+    if (existing) {
+      logger.info("stripe.webhook: event already processed", {
+        module: "stripe.webhook",
+        metadata: { eventId: event.id, eventType: event.type },
+      });
+      return NextResponse.json({ received: true });
+    }
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
@@ -55,7 +78,7 @@ export const POST = async (request: Request) => {
             "stripe.webhook: checkout.session.completed missing userId",
             {
               module: "stripe.webhook",
-              metadata: { sessionId: session.id ?? null },
+              metadata: { sessionId: session.id ?? null, eventId: event.id },
             },
           );
           break;
@@ -69,24 +92,30 @@ export const POST = async (request: Request) => {
           .set({
             stripeCustomerId: customer ?? null,
             plan: "PRO",
+            planUpdatedAt: new Date(),
           })
           .where(eq(usersTable.id, userId));
         const updated =
           typeof result === "number"
             ? result
             : ((result as any)?.rowCount ?? null);
-        logger.info("stripe.webhook.db.update", {
-          module: "stripe.webhook",
-          metadata: { userId, result },
-        });
-        logger.info("stripe.webhook.updated-user", {
-          module: "stripe.webhook",
-          metadata: { userId, updated },
-        });
-        logger.info("stripe.webhook: user plan updated", {
-          module: "stripe.webhook",
-          metadata: { userId, updated },
-        });
+        if (updated !== 1) {
+          logger.error("stripe.webhook: failed to update user plan", {
+            module: "stripe.webhook",
+            metadata: { eventId: event.id, userId, updated, level: "fatal" },
+          });
+        } else {
+          logger.info("stripe.webhook: user plan updated", {
+            module: "stripe.webhook",
+            metadata: {
+              eventId: event.id,
+              eventType: event.type,
+              userId,
+              stripeCustomerId: customer ?? null,
+              processedAt: new Date().toISOString(),
+            },
+          });
+        }
         break;
       }
       case "invoice.paid": {
@@ -116,12 +145,39 @@ export const POST = async (request: Request) => {
                 : (invoiceSub as any).id;
             const subscription =
               await stripe.subscriptions.retrieve(subscriptionId);
+            // Validate subscription status before trusting
             if (
               subscription &&
               subscription.metadata &&
               (subscription.metadata as any).userId
             ) {
-              userId = (subscription.metadata as any).userId as string;
+              // ensure active and not expired
+              const statusOk = subscription.status === "active";
+              const periodEnd = (subscription as any).current_period_end
+                ? new Date(
+                    ((subscription as any)
+                      .current_period_end as unknown as number) * 1000,
+                  )
+                : null;
+              const notExpired = periodEnd
+                ? periodEnd.getTime() > Date.now()
+                : true;
+              if (statusOk && notExpired) {
+                userId = (subscription.metadata as any).userId as string;
+              } else {
+                logger.warn(
+                  "stripe.webhook: subscription not active or expired",
+                  {
+                    module: "stripe.webhook",
+                    metadata: {
+                      eventId: event.id,
+                      subscriptionId,
+                      status: subscription.status,
+                      periodEnd,
+                    },
+                  },
+                );
+              }
             }
           } catch (e) {
             logger.warn("stripe.webhook: failed to retrieve subscription", {
@@ -130,45 +186,83 @@ export const POST = async (request: Request) => {
             });
           }
         }
+        // If still no userId, try to resolve by stripe customer id
         if (!userId) {
-          logger.warn("stripe.webhook: invoice.paid missing userId", {
-            module: "stripe.webhook",
-            metadata: { invoiceId: invoice.id ?? null },
-          });
+          const customer =
+            typeof invoice.customer === "string"
+              ? invoice.customer
+              : invoice.customer?.id;
+          if (customer) {
+            const found = await db.query.usersTable.findFirst({
+              where: eq(usersTable.stripeCustomerId, customer),
+            });
+            if (found) {
+              userId = found.id;
+              logger.info("stripe.webhook: resolved user by stripeCustomerId", {
+                module: "stripe.webhook",
+                metadata: {
+                  eventId: event.id,
+                  stripeCustomerId: customer,
+                  userId,
+                },
+              });
+            }
+          }
+        }
+        if (!userId) {
+          logger.warn(
+            "stripe.webhook: invoice.paid missing userId after fallbacks",
+            {
+              module: "stripe.webhook",
+              metadata: { invoiceId: invoice.id ?? null, eventId: event.id },
+            },
+          );
           break;
         }
         const customer =
           typeof invoice.customer === "string"
             ? invoice.customer
             : invoice.customer?.id;
+        const subscriptionIdVal = invoiceSub
+          ? typeof invoiceSub === "string"
+            ? invoiceSub
+            : (invoiceSub as any).id
+          : null;
+
         const result = await db
           .update(usersTable)
           .set({
-            stripeSubscriptionId: invoiceSub
-              ? typeof invoiceSub === "string"
-                ? invoiceSub
-                : (invoiceSub as any).id
-              : null,
+            stripeSubscriptionId: subscriptionIdVal ?? null,
             stripeCustomerId: customer ?? null,
             plan: "PRO",
+            planUpdatedAt: new Date(),
           })
           .where(eq(usersTable.id, userId));
         const updated =
           typeof result === "number"
             ? result
             : ((result as any)?.rowCount ?? null);
-        logger.info("stripe.webhook.db.update", {
-          module: "stripe.webhook",
-          metadata: { userId, result },
-        });
-        logger.info("stripe.webhook.updated-user", {
-          module: "stripe.webhook",
-          metadata: { userId, updated },
-        });
-        logger.info("stripe.webhook: user plan updated", {
-          module: "stripe.webhook",
-          metadata: { userId, updated },
-        });
+        if (updated !== 1) {
+          logger.error(
+            "stripe.webhook: failed to update user plan for invoice.paid",
+            {
+              module: "stripe.webhook",
+              metadata: { eventId: event.id, userId, updated, level: "fatal" },
+            },
+          );
+        } else {
+          logger.info("stripe.webhook: invoice.paid applied, user updated", {
+            module: "stripe.webhook",
+            metadata: {
+              eventId: event.id,
+              eventType: event.type,
+              userId,
+              stripeCustomerId: customer ?? null,
+              stripeSubscriptionId: subscriptionIdVal ?? null,
+              processedAt: new Date().toISOString(),
+            },
+          });
+        }
         break;
       }
       case "customer.subscription.deleted": {
@@ -191,25 +285,46 @@ export const POST = async (request: Request) => {
             stripeSubscriptionId: null,
             stripeCustomerId: null,
             plan: null,
+            planUpdatedAt: new Date(),
           })
           .where(eq(usersTable.id, userId));
         const updated =
           typeof result === "number"
             ? result
             : ((result as any)?.rowCount ?? null);
-        logger.info("stripe.webhook.db.update", {
-          module: "stripe.webhook",
-          metadata: { userId, result },
-        });
-        logger.info("stripe.webhook.updated-user", {
-          module: "stripe.webhook",
-          metadata: { userId, updated },
-        });
-        logger.info("stripe.webhook: user plan updated", {
-          module: "stripe.webhook",
-          metadata: { userId, updated },
-        });
+        if (updated !== 1) {
+          logger.error(
+            "stripe.webhook: failed to clear user plan on subscription.deleted",
+            {
+              module: "stripe.webhook",
+              metadata: { eventId: event.id, userId, updated, level: "fatal" },
+            },
+          );
+        } else {
+          logger.info(
+            "stripe.webhook: subscription.deleted applied, user cleared",
+            {
+              module: "stripe.webhook",
+              metadata: {
+                eventId: event.id,
+                userId,
+                processedAt: new Date().toISOString(),
+              },
+            },
+          );
+        }
       }
+    }
+    // mark event processed for idempotency
+    try {
+      await db
+        .insert(stripeEventsTable)
+        .values({ id: event.id, type: event.type, createdAt: new Date() });
+    } catch (e) {
+      logger.warn("stripe.webhook: failed to insert stripe_events record", {
+        module: "stripe.webhook",
+        metadata: { eventId: event.id },
+      });
     }
   } catch (err) {
     logger.error("stripe.webhook.processing_error", err as Error);
