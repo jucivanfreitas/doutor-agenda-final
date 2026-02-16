@@ -8,6 +8,8 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { db } from "@/db";
+import { sql } from "drizzle-orm";
 
 const WithAuthentication = async ({
   children,
@@ -41,6 +43,24 @@ const WithAuthentication = async ({
   if (mustHaveClinic && !session.user.clinic) {
     logger.info("with-authentication: user has no clinic", requestCtx);
     redirect("/clinic-form");
+  }
+
+  // Set DB session context for RLS (if clinic present)
+  try {
+    const clinicId = session.user.clinic?.id;
+    if (clinicId) {
+      // set_current_clinic is created by the RLS migration
+      await db.execute(sql`SELECT set_current_clinic(${clinicId})`);
+      logger.info("with-authentication: set DB clinic context", {
+        ...requestCtx,
+      });
+    }
+  } catch (err) {
+    logger.error("with-authentication: failed to set DB clinic context", {
+      error: err,
+      ...requestCtx,
+    });
+    // allow request to continue; RLS will prevent cross-tenant access if context missing
   }
 
   // render children (session valid)

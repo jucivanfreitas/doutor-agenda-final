@@ -290,6 +290,25 @@ Raiz do projeto (visão resumida):
 
                     - Observação: posso aplicar correções pontuais no repositório (ex.: setar `baseURL` em dev config e ajustar as chaves do schema passadas ao adapter). Deseja que eu faça essas alterações agora?
 
+                ---
+
+                - Data: 2026-02-16
+                  - Autor: VSCode Agent
+                  - Tipo: security/feature
+                  - Descrição curta: Implementação inicial de Row Level Security (RLS) para isolamento multi-tenant
+                  - Detalhes: Adicionada migration `drizzle/0001_enable_rls.sql` que cria função `set_current_clinic(uuid)`, ativa RLS e cria policies baseadas em `clinic_id` para as tabelas multi-tenant (appointments, patients, doctors, users_to_clinics). Também aplicamos `FORCE ROW LEVEL SECURITY` para impedir bypass por owners.
+                  - Código alterado:
+                    - drizzle/0001_enable_rls.sql (novo)
+                    - src/hocs/with-authentication.tsx (seta `app.current_clinic_id` via `SELECT set_current_clinic(...)` ao resolver sessão)
+                  - Notas de implantação/testes:
+                    1. Rodar migration no banco (ex: `npx drizzle-kit push` ou aplicar SQL manualmente).
+                    2. Garantir que o middleware/chave que resolve `clinicId` chame `SELECT set_current_clinic(...)` antes de qualquer query.
+                    3. Teste manual: logar como Clinic A e confirmar que queries não retornam dados da Clinic B.
+                  - Riscos/Próximos passos:
+                    - Revisar todas as tabelas que possuam `clinic_id` e adicionar policy correspondente.
+                    - Garantir que jobs/cron/consumers também setem o contexto de clinic antes de executar queries.
+                    - Considerar adicionar monitor de auditoria para tentativas bloqueadas por RLS.
+
         - helpers/
           - currency.ts
           - time.ts
